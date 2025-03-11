@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.1.1",
+    "@types/uuid": "^10.0.0",
     "birpc": "^2.0.19",
     "classnames": "^2.5.1",
     "highlight.js": "^11.11.1",
@@ -32,7 +33,8 @@
     "pretty-ms": "^9.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "semver": "^7.7.0"
+    "semver": "^7.7.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^3.0.1",

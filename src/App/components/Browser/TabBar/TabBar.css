@@ -1,0 +1,121 @@
+.tabBar {
+    display: flex;
+    height: 40px;
+    background-color: #d5d5d5;
+    border-bottom: 1px solid #bbb;
+    overflow-x: auto;
+    white-space: nowrap;
+    user-select: none;
+    z-index: 20;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.tabBarScroll {
+    display: flex;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.tabBarScroll::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabBarScroll::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 2px;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    min-width: 100px;
+    max-width: 200px;
+    height: 36px;
+    margin: 2px 1px 0 0;
+    padding: 0 10px;
+    border-radius: 8px 8px 0 0;
+    background-color: #d0d0d0;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #bbb;
+    border-bottom: none;
+}
+
+.tab.active {
+    background-color: #fff;
+    border: 1px solid #bbb;
+    border-bottom: none;
+    z-index: 1;
+}
+
+.tabTitle {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    color: #333;
+    font-weight: 500;
+}
+
+.tabLoading {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border: 2px solid #999;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.tabCloseButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.tabCloseButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tabCloseIcon {
+    width: 12px;
+    height: 12px;
+    color: #666;
+}
+
+.newTabButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    margin: 2px 8px 0;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.newTabButton:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.newTabIcon {
+    width: 20px;
+    height: 20px;
+    color: #333;
+    stroke-width: 2.5px;
+}

@@ -1,0 +1,44 @@
+.browserContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    overflow: hidden;
+    position: relative;
+}
+
+.browserContent {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.webContent {
+    flex: 1;
+    background-color: #fff;
+    height: 100%;
+    position: relative;
+}
+
+.webPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background-color: #f5f5f5;
+    color: #666;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.webPlaceholder p {
+    margin-top: 10px;
+    font-size: 16px;
+}

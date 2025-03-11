@@ -1,7 +1,8 @@
 import {fileURLToPath} from "node:url";
 import path from "node:path";
-import {app, shell, BrowserWindow} from "electron";
+import {app, shell, BrowserWindow, session} from "electron";
 import {registerLlmRpc} from "./rpc/llmRpc.ts";
+import {registerBrowserRpc} from "./rpc/browserRpc.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,25 +27,43 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null;
 
-function createWindow() {
-    win = new BrowserWindow({
-        icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
-        webPreferences: {
-            preload: path.join(__dirname, "preload.mjs")
-        },
-        width: 1000,
-        height: 700
+// Enable webview and other security features
+app.on("web-contents-created", (_, contents) => {
+    // Set secure defaults for webview
+    contents.on("will-attach-webview", (event, webPreferences, params) => {
+        delete webPreferences.preload;
+        webPreferences.nodeIntegration = false;
+        webPreferences.contextIsolation = true;
     });
-    registerLlmRpc(win);
 
-    // open external links in the default browser
-    win.webContents.setWindowOpenHandler(({url}) => {
-        if (url.startsWith("file://"))
+    // Handle new windows securely
+    contents.setWindowOpenHandler(({url}) => {
+        if (url.startsWith("file://") || url.startsWith("https://"))
             return {action: "allow"};
 
         void shell.openExternal(url);
         return {action: "deny"};
     });
+});
+
+function createWindow() {
+    win = new BrowserWindow({
+        icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+        webPreferences: {
+            preload: path.join(__dirname, "preload.mjs"),
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true
+        },
+        width: 1280,
+        height: 800,
+        minWidth: 800,
+        minHeight: 600
+    });
+    
+    // Register RPCs
+    registerLlmRpc(win);
+    registerBrowserRpc(win);
 
     // Test active push message to Renderer-process.
     win.webContents.on("did-finish-load", () => {
