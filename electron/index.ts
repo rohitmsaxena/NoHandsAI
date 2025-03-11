@@ -73,9 +73,9 @@ function createWindow() {
     parentView.webContents.loadURL('data:text/html,<!DOCTYPE html><html><head><style>html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; pointer-events: none; }</style></head><body></body></html>');
         
     // Make the parent view transparent to let the child views handle events
-    parentView.webContents.on('did-finish-load', () => {
-        parentView.webContents.setBackgroundColor('#00000000');
-    });
+    // parentView.webContents.on('did-finish-load', () => {
+    //     parentView.webContents.setBackgroundColor('#00000000');
+    // });
     
     // Create the main UI WebContentsView that will contain app UI (including toolbar and tabs)
     const mainView = new WebContentsView({
@@ -121,11 +121,11 @@ function createWindow() {
     });
     
     // Add a resize handler to update the view sizes when the window size changes
-    win.on("resize", () => {
-        const bounds = win.getBounds();
-        mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
-        contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight });
-    });
+    // win.on("resize", () => {
+    //     const bounds = win.getBounds();
+    //     mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
+    //     contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight });
+    // });
     
     // Register RPCs with the main view's WebContents
     registerLlmRpc(mainView);

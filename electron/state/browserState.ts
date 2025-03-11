@@ -315,19 +315,19 @@ export const browserFunctions = {
         
         // Update state first so events update the correct tab
         const tabIndex = browserState.state.tabs.findIndex((t) => t.id === browserState.state.activeTabId);
-        if (tabIndex !== -1) {
-            const updatedTabs = [...browserState.state.tabs];
-            updatedTabs[tabIndex] = {
-                ...updatedTabs[tabIndex],
-                url: normalizedUrl,
-                isLoading: true
-            };
-            
-            browserState.state = {
-                ...browserState.state,
-                tabs: updatedTabs
-            };
-        }
+        // if (tabIndex !== -1) {
+        //     const updatedTabs = [...browserState.state.tabs];
+        //     updatedTabs[tabIndex] = {
+        //         ...updatedTabs[tabIndex],
+        //         url: normalizedUrl,
+        //         isLoading: true
+        //     };
+        //
+        //     browserState.state = {
+        //         ...browserState.state,
+        //         tabs: updatedTabs
+        //     };
+        // }
         
         // Navigate to the URL in the browser content view
         if (browserContentView) {
