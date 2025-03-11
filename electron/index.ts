@@ -84,10 +84,12 @@ function createWindow() {
     const headerHeight = 85; // Combined height of tab bar (40px) and navigation bar (45px)
     
     // Position the main view at the top for toolbar and tabs
-    mainView.setBounds({ x: 0, y: 0, width: 1280, height: headerHeight });
-    
-    // Position the browser content view beneath the header area 
-    contentView.setBounds({ x: 0, y: headerHeight, width: 1280, height: 800 - headerHeight});
+    mainView.setBounds({ x: 0, y: 0, width: 1280, height: headerHeight});
+
+    //todo: figure out why the additional 35 is needed.
+
+    // Position the browser content view beneath the header area
+    contentView.setBounds({ x: 0, y: headerHeight, width: 1280, height: 800 - headerHeight - 35});
     
     // Ensure the child views handle pointer events properly
     mainView.webContents.on('dom-ready', () => {
@@ -101,8 +103,10 @@ function createWindow() {
     // Add a resize handler to update the view sizes when the window size changes
     win.on("resize", () => {
         const bounds = win?.getBounds();
-        mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
-        contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight });
+        if (bounds) {
+            mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
+            contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight -35 });
+        }
     });
     
     // Register RPCs with the main view's WebContents
