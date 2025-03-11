@@ -1,4 +1,4 @@
-import {ipcMain, BrowserWindow} from "electron";
+import {ipcMain, WebContentsView, BaseWindow} from "electron";
 import {createElectronSideBirpc} from "../utils/createElectronSideBirpc.ts";
 import {browserFunctions, browserState} from "../state/browserState.ts";
 import type {RenderedBrowserFunctions} from "../../src/rpc/browserRpc.ts";
@@ -37,7 +37,7 @@ export class ElectronBrowserRpc {
         
         getState() {
             return {
-                tabs: browserState.state.tabs.map(tab => ({
+                tabs: browserState.state.tabs.map((tab) => ({
                     id: tab.id,
                     url: tab.url,
                     title: tab.title,
@@ -55,18 +55,18 @@ export class ElectronBrowserRpc {
         }
     } as const;
 
-    public constructor(window: BrowserWindow) {
+    public constructor(view: WebContentsView, window: BaseWindow, contentView: WebContentsView) {
         this.rendererBrowserRpc = createElectronSideBirpc<RenderedBrowserFunctions, typeof this.functions>(
             "browserRpc", 
             "browserRpc", 
-            window, 
+            view.webContents, 
             this.functions
         );
 
         this.sendCurrentBrowserState = this.sendCurrentBrowserState.bind(this);
         
-        // Initialize browser functionality with a single tab
-        browserFunctions.initialize(window, true);
+        // Initialize browser functionality with a single tab, passing the content view for browser tabs
+        browserFunctions.initialize(window, view, contentView, true);
         
         // Set up IPC handlers for browser navigation
         ipcMain.handle("browser:go-back", async () => {
@@ -104,17 +104,14 @@ export class ElectronBrowserRpc {
         // Handle window resizing
         window.on("resize", () => {
             if (browserState.state.activeTabId) {
-                const activeTab = browserState.state.tabs.find(t => t.id === browserState.state.activeTabId);
+                const activeTab = browserState.state.tabs.find((t) => t.id === browserState.state.activeTabId);
                 if (activeTab) {
-                    const contentBounds = window.getContentBounds();
-                    const tabHeight = 40; // Height of the tab bar
+                    // For BaseWindow + WebContentsView architecture, the resize is handled automatically
+                    // We might need to adjust layout or positioning based on the new size
+                    console.log('Window resized, BaseWindow will handle WebContentsView layout');
                     
-                    activeTab.browserView.setBounds({
-                        x: 0, 
-                        y: tabHeight,
-                        width: contentBounds.width,
-                        height: contentBounds.height - tabHeight
-                    });
+                    // We could potentially add custom resize handling here if needed
+                    // But in most cases, the BaseWindow will handle the WebContentsView positioning
                 }
             }
         });
@@ -122,7 +119,7 @@ export class ElectronBrowserRpc {
 
     public sendCurrentBrowserState() {
         this.rendererBrowserRpc.updateBrowserState({
-            tabs: browserState.state.tabs.map(tab => ({
+            tabs: browserState.state.tabs.map((tab) => ({
                 id: tab.id,
                 url: tab.url,
                 title: tab.title,
@@ -138,6 +135,15 @@ export class ElectronBrowserRpc {
 
 export type ElectronBrowserFunctions = typeof ElectronBrowserRpc.prototype.functions;
 
-export function registerBrowserRpc(window: BrowserWindow) {
-    new ElectronBrowserRpc(window);
+export function registerBrowserRpc(view: WebContentsView, win?: BaseWindow, contentView?: WebContentsView) {
+    // If no window is provided, we can't initialize the browser rpc
+    if (!win) {
+        console.error("No BaseWindow provided to registerBrowserRpc");
+        return;
+    }
+    if (!contentView) {
+        console.error("No content WebContentsView provided to registerBrowserRpc");
+        return;
+    }
+    new ElectronBrowserRpc(view, win, contentView);
 }

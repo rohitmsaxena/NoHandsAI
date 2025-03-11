@@ -47,6 +47,7 @@ export function Sidebar() {
             const interval = setInterval(scrollToBottom, 500);
             return () => clearInterval(interval);
         }
+        return undefined; // Explicit return for non-generatingResult case
     }, [generatingResult, scrollToBottom]);
     
     const modelLoaded = state.model.loaded && state.llama.loaded && 
@@ -93,7 +94,8 @@ export function Sidebar() {
                                     <div 
                                         className="loadingProgressBar" 
                                         style={{width: `${Math.round(state.model.loadProgress * 100)}%`}}
-                                    ></div>
+                                    >
+                                    </div>
                                 </div>
                             )}
                         </div>

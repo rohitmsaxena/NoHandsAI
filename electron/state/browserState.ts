@@ -1,5 +1,5 @@
 import {State} from "lifecycle-utils";
-import {BrowserView, BrowserWindow} from "electron";
+import {BaseWindow, WebContents, WebContentsView} from "electron";
 import {v4 as uuidv4} from "uuid";
 
 export type BrowserTab = {
@@ -8,8 +8,7 @@ export type BrowserTab = {
     title: string,
     isLoading: boolean,
     canGoBack: boolean,
-    canGoForward: boolean,
-    browserView: BrowserView
+    canGoForward: boolean
 };
 
 export type BrowserState = {
@@ -22,11 +21,159 @@ export const browserState = new State<BrowserState>({
     activeTabId: null
 });
 
-let mainWindow: BrowserWindow | null = null;
+let mainWindow: BaseWindow | null = null;
+let mainUIWebContents: WebContents | null = null;
+let browserContentView: WebContentsView | null = null;
+
+// Setup handlers for the shared browser content view
+function setupBrowserContentViewEventHandlers() {
+    if (!browserContentView) return;
+
+    // Remove any existing listeners first to avoid duplicates
+    browserContentView.webContents.removeAllListeners("page-title-updated");
+    browserContentView.webContents.removeAllListeners("did-navigate");
+    browserContentView.webContents.removeAllListeners("did-start-loading");
+    browserContentView.webContents.removeAllListeners("did-stop-loading");
+
+    // Listen for title changes
+    browserContentView.webContents.on("page-title-updated", (event, title) => {
+        if (!browserState.state.activeTabId) return;
+        
+        const tabIndex = browserState.state.tabs.findIndex((tab) => tab.id === browserState.state.activeTabId);
+        if (tabIndex !== -1) {
+            const updatedTabs = [...browserState.state.tabs];
+            const currentTab = updatedTabs[tabIndex];
+            if (currentTab) {
+                updatedTabs[tabIndex] = {
+                    ...currentTab,
+                    title
+                };
+            }
+            
+            browserState.state = {
+                ...browserState.state,
+                tabs: updatedTabs
+            };
+            
+            notifyTabsUpdated();
+        }
+    });
+    
+    // Listen for URL changes
+    browserContentView.webContents.on("did-navigate", (event, url) => {
+        if (!browserState.state.activeTabId) return;
+        
+        const tabIndex = browserState.state.tabs.findIndex((tab) => tab.id === browserState.state.activeTabId);
+        if (tabIndex !== -1) {
+            // Use the navigationHistory API for Electron 35+
+            const navHistory = browserContentView?.webContents.navigationHistory;
+            const canGoBack = Boolean(navHistory?.canGoBack);
+            const canGoForward = Boolean(navHistory?.canGoForward);
+            
+            const updatedTabs = [...browserState.state.tabs];
+            const currentTab = updatedTabs[tabIndex];
+            if (currentTab) {
+                updatedTabs[tabIndex] = {
+                    ...currentTab,
+                    url,
+                    canGoBack,
+                    canGoForward
+                };
+            }
+            
+            browserState.state = {
+                ...browserState.state,
+                tabs: updatedTabs
+            };
+            
+            if (mainUIWebContents) {
+                mainUIWebContents.send("browser:url-changed", browserState.state.activeTabId, url);
+            }
+            
+            notifyTabsUpdated();
+        }
+    });
+    
+    // Listen for loading state changes
+    browserContentView.webContents.on("did-start-loading", () => {
+        if (!browserState.state.activeTabId) return;
+        
+        const tabIndex = browserState.state.tabs.findIndex((tab) => tab.id === browserState.state.activeTabId);
+        if (tabIndex !== -1) {
+            const updatedTabs = [...browserState.state.tabs];
+            const currentTab = updatedTabs[tabIndex];
+            if (currentTab) {
+                updatedTabs[tabIndex] = {
+                    ...currentTab,
+                    isLoading: true
+                };
+            }
+            
+            browserState.state = {
+                ...browserState.state,
+                tabs: updatedTabs
+            };
+            
+            notifyTabsUpdated();
+        }
+    });
+    
+    browserContentView.webContents.on("did-stop-loading", () => {
+        if (!browserState.state.activeTabId) return;
+        
+        const tabIndex = browserState.state.tabs.findIndex((tab) => tab.id === browserState.state.activeTabId);
+        if (tabIndex !== -1) {
+            // Use the navigationHistory API for Electron 35+
+            const navHistory = browserContentView?.webContents.navigationHistory;
+            const canGoBack = Boolean(navHistory?.canGoBack);
+            const canGoForward = Boolean(navHistory?.canGoForward);
+            
+            const updatedTabs = [...browserState.state.tabs];
+            const currentTab = updatedTabs[tabIndex];
+            if (currentTab) {
+                updatedTabs[tabIndex] = {
+                    ...currentTab,
+                    isLoading: false,
+                    canGoBack,
+                    canGoForward
+                };
+            }
+            
+            browserState.state = {
+                ...browserState.state,
+                tabs: updatedTabs
+            };
+            
+            notifyTabsUpdated();
+        }
+    });
+
+    console.log('Set up event handlers for browser content view');
+}
+
+// Helper to notify UI of tab updates
+function notifyTabsUpdated() {
+    if (mainUIWebContents) {
+        mainUIWebContents.send("browser:tabs-updated", browserState.state.tabs.map((tab) => ({
+            id: tab.id,
+            url: tab.url,
+            title: tab.title,
+            isLoading: tab.isLoading,
+            canGoBack: tab.canGoBack,
+            canGoForward: tab.canGoForward,
+            isActive: tab.id === browserState.state.activeTabId
+        })));
+    }
+}
 
 export const browserFunctions = {
-    initialize(window: BrowserWindow, createInitialTab: boolean = false) {
+    initialize(window: BaseWindow, mainView: WebContentsView, contentView: WebContentsView, createInitialTab: boolean = false) {
         mainWindow = window;
+        mainUIWebContents = mainView.webContents;
+        browserContentView = contentView;
+        
+        // Set up event handlers for the browser content view
+        setupBrowserContentViewEventHandlers();
         
         // Set up a default tab when initialized if requested
         if (createInitialTab && browserState.state.tabs.length === 0) {
@@ -41,147 +188,9 @@ export const browserFunctions = {
         
         const tabId = uuidv4();
         
-        // Create the browser view for this tab
-        const view = new BrowserView({
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                sandbox: true,
-                webviewTag: true
-            }
-        });
-        
-        // Set initial size (will be updated on tab switch)
-        const contentBounds = mainWindow.getContentBounds();
-        const headerHeight = 85; // Combined height of tab bar (40px) and navigation bar (45px)
-        const sidebarWidth = 0; // Will be adjusted when sidebar is opened
-        
-        view.setBounds({
-            x: 0, 
-            y: headerHeight,
-            width: contentBounds.width - sidebarWidth,
-            height: contentBounds.height - headerHeight
-        });
-        
-        // Load the URL
-        await view.webContents.loadURL(url);
-        
-        // Listen for title changes
-        view.webContents.on("page-title-updated", (event, title) => {
-            const tabIndex = browserState.state.tabs.findIndex(tab => tab.id === tabId);
-            if (tabIndex !== -1) {
-                const updatedTabs = [...browserState.state.tabs];
-                updatedTabs[tabIndex] = {
-                    ...updatedTabs[tabIndex],
-                    title
-                };
-                
-                browserState.state = {
-                    ...browserState.state,
-                    tabs: updatedTabs
-                };
-                
-                mainWindow?.webContents.send("browser:title-changed", tabId, title);
-                mainWindow?.webContents.send("browser:tabs-updated", browserState.state.tabs.map(tab => ({
-                    id: tab.id,
-                    url: tab.url,
-                    title: tab.title,
-                    isLoading: tab.isLoading,
-                    canGoBack: tab.canGoBack,
-                    canGoForward: tab.canGoForward
-                })));
-            }
-        });
-        
-        // Listen for URL changes
-        view.webContents.on("did-navigate", (event, url) => {
-            const tabIndex = browserState.state.tabs.findIndex(tab => tab.id === tabId);
-            if (tabIndex !== -1) {
-                // Use direct canGoBack and canGoForward methods instead of navigationHistory
-                const canGoBack = view.webContents.canGoBack();
-                const canGoForward = view.webContents.canGoForward();
-                
-                const updatedTabs = [...browserState.state.tabs];
-                updatedTabs[tabIndex] = {
-                    ...updatedTabs[tabIndex],
-                    url,
-                    canGoBack,
-                    canGoForward
-                };
-                
-                browserState.state = {
-                    ...browserState.state,
-                    tabs: updatedTabs
-                };
-                
-                mainWindow?.webContents.send("browser:url-changed", tabId, url);
-                mainWindow?.webContents.send("browser:tabs-updated", browserState.state.tabs.map(tab => ({
-                    id: tab.id,
-                    url: tab.url,
-                    title: tab.title,
-                    isLoading: tab.isLoading,
-                    canGoBack: tab.canGoBack,
-                    canGoForward: tab.canGoForward
-                })));
-            }
-        });
-        
-        // Listen for loading state changes
-        view.webContents.on("did-start-loading", () => {
-            const tabIndex = browserState.state.tabs.findIndex(tab => tab.id === tabId);
-            if (tabIndex !== -1) {
-                const updatedTabs = [...browserState.state.tabs];
-                updatedTabs[tabIndex] = {
-                    ...updatedTabs[tabIndex],
-                    isLoading: true
-                };
-                
-                browserState.state = {
-                    ...browserState.state,
-                    tabs: updatedTabs
-                };
-                
-                mainWindow?.webContents.send("browser:tabs-updated", browserState.state.tabs.map(tab => ({
-                    id: tab.id,
-                    url: tab.url,
-                    title: tab.title,
-                    isLoading: tab.isLoading,
-                    canGoBack: tab.canGoBack,
-                    canGoForward: tab.canGoForward
-                })));
-            }
-        });
-        
-        view.webContents.on("did-stop-loading", () => {
-            const tabIndex = browserState.state.tabs.findIndex(tab => tab.id === tabId);
-            if (tabIndex !== -1) {
-                // Use direct canGoBack and canGoForward methods instead of navigationHistory
-                const canGoBack = view.webContents.canGoBack();
-                const canGoForward = view.webContents.canGoForward();
-                
-                const updatedTabs = [...browserState.state.tabs];
-                updatedTabs[tabIndex] = {
-                    ...updatedTabs[tabIndex],
-                    isLoading: false,
-                    canGoBack,
-                    canGoForward
-                };
-                
-                browserState.state = {
-                    ...browserState.state,
-                    tabs: updatedTabs
-                };
-                
-                mainWindow?.webContents.send("browser:tabs-updated", browserState.state.tabs.map(tab => ({
-                    id: tab.id,
-                    url: tab.url,
-                    title: tab.title,
-                    isLoading: tab.isLoading,
-                    canGoBack: tab.canGoBack,
-                    canGoForward: tab.canGoForward
-                })));
-            }
-        });
+        // In the new architecture, we just create tab metadata
+        // The actual content will be loaded in the shared browserContentView
+        console.log('Creating tab metadata for:', url);
         
         // Add the tab to our state
         browserState.state = {
@@ -194,8 +203,7 @@ export const browserFunctions = {
                     title: url, // Start with URL as title until page loads
                     isLoading: true,
                     canGoBack: false,
-                    canGoForward: false,
-                    browserView: view
+                    canGoForward: false
                 }
             ],
             activeTabId: tabId
@@ -205,14 +213,7 @@ export const browserFunctions = {
         await browserFunctions.switchTab(tabId);
         
         // Notify the renderer about the new tab
-        mainWindow.webContents.send("browser:tabs-updated", browserState.state.tabs.map(tab => ({
-            id: tab.id,
-            url: tab.url,
-            title: tab.title,
-            isLoading: tab.isLoading,
-            canGoBack: tab.canGoBack,
-            canGoForward: tab.canGoForward
-        })));
+        notifyTabsUpdated();
         
         return tabId;
     },
@@ -222,22 +223,13 @@ export const browserFunctions = {
             throw new Error("Browser window not initialized");
         }
         
-        const tabIndex = browserState.state.tabs.findIndex(tab => tab.id === tabId);
+        const tabIndex = browserState.state.tabs.findIndex((tab) => tab.id === tabId);
         if (tabIndex === -1) {
             return; // Tab not found
         }
         
-        // Get the tab to remove
-        const tabToRemove = browserState.state.tabs[tabIndex];
-        
-        // Remove the BrowserView from the window
-        mainWindow.removeBrowserView(tabToRemove.browserView);
-        
-        // Destroy the BrowserView
-        tabToRemove.browserView.webContents.destroy();
-        
         // Remove the tab from our state
-        const updatedTabs = browserState.state.tabs.filter(tab => tab.id !== tabId);
+        const updatedTabs = browserState.state.tabs.filter((tab) => tab.id !== tabId);
         
         // Determine the new active tab
         let newActiveTabId: string | null = null;
@@ -259,17 +251,13 @@ export const browserFunctions = {
         // Switch to the new active tab if one exists
         if (newActiveTabId) {
             await browserFunctions.switchTab(newActiveTabId);
+        } else if (browserContentView) {
+            // If no tabs left, load about:blank
+            browserContentView.webContents.loadURL("about:blank");
         }
         
         // Notify the renderer
-        mainWindow.webContents.send("browser:tabs-updated", browserState.state.tabs.map(tab => ({
-            id: tab.id,
-            url: tab.url,
-            title: tab.title,
-            isLoading: tab.isLoading,
-            canGoBack: tab.canGoBack,
-            canGoForward: tab.canGoForward
-        })));
+        notifyTabsUpdated();
     },
     
     async switchTab(tabId: string) {
@@ -277,57 +265,46 @@ export const browserFunctions = {
             throw new Error("Browser window not initialized");
         }
         
-        const tab = browserState.state.tabs.find(t => t.id === tabId);
+        const tab = browserState.state.tabs.find((t) => t.id === tabId);
         if (!tab) {
             return; // Tab not found
         }
         
-        // Remove any existing BrowserView
-        for (const t of browserState.state.tabs) {
-            mainWindow.removeBrowserView(t.browserView);
+        console.log('Switching to tab:', tab.id);
+        
+        try {
+            // Load the tab's URL in the shared browser content view
+            if (browserContentView) {
+                const tabUrl = tab.url || "about:blank";
+                console.log(`Loading URL: ${tabUrl} into browser content view`);
+                
+                // Set tab as active before loading to ensure events update the correct tab
+                browserState.state = {
+                    ...browserState.state,
+                    activeTabId: tabId
+                };
+                
+                // Load the URL
+                try {
+                    await browserContentView.webContents.loadURL(tabUrl);
+                    console.log('Successfully loaded tab URL in content view');
+                } catch (loadError) {
+                    console.error('Error loading URL in content view:', loadError);
+                }
+            } else {
+                console.error('No browser content view available for tab activation');
+            }
+        } catch (error) {
+            console.error('Error activating tab in browser content view:', error);
         }
         
-        // Add and size the BrowserView for this tab
-        mainWindow.addBrowserView(tab.browserView);
-        
-        // Position the view (taking into account tab bar, navigation bar and potentially sidebar)
-        const contentBounds = mainWindow.getContentBounds();
-        const headerHeight = 85; // Combined height of tab bar (40px) and navigation bar (45px)
-        const sidebarWidth = 0; // Will be adjusted when sidebar is opened
-        
-        tab.browserView.setBounds({
-            x: 0, 
-            y: headerHeight,
-            width: contentBounds.width - sidebarWidth,
-            height: contentBounds.height - headerHeight
-        });
-        
-        // Update state
-        browserState.state = {
-            ...browserState.state,
-            activeTabId: tabId
-        };
-        
         // Notify the renderer
-        mainWindow.webContents.send("browser:tabs-updated", browserState.state.tabs.map(t => ({
-            id: t.id,
-            url: t.url,
-            title: t.title,
-            isLoading: t.isLoading,
-            canGoBack: t.canGoBack,
-            canGoForward: t.canGoForward,
-            isActive: t.id === tabId
-        })));
+        notifyTabsUpdated();
     },
     
     async loadURL(url: string) {
         if (!mainWindow || !browserState.state.activeTabId) {
             throw new Error("No active tab");
-        }
-        
-        const activeTab = browserState.state.tabs.find(t => t.id === browserState.state.activeTabId);
-        if (!activeTab) {
-            throw new Error("Active tab not found");
         }
         
         // Normalize URL (add https:// if needed)
@@ -336,14 +313,10 @@ export const browserFunctions = {
             normalizedUrl = `https://${url}`;
         }
         
-        // Navigate to the URL
-        await activeTab.browserView.webContents.loadURL(normalizedUrl);
-        
-        // Update state
-        const updatedTabs = [...browserState.state.tabs];
-        const tabIndex = updatedTabs.findIndex(t => t.id === activeTab.id);
-        
+        // Update state first so events update the correct tab
+        const tabIndex = browserState.state.tabs.findIndex((t) => t.id === browserState.state.activeTabId);
         if (tabIndex !== -1) {
+            const updatedTabs = [...browserState.state.tabs];
             updatedTabs[tabIndex] = {
                 ...updatedTabs[tabIndex],
                 url: normalizedUrl,
@@ -355,55 +328,75 @@ export const browserFunctions = {
                 tabs: updatedTabs
             };
         }
+        
+        // Navigate to the URL in the browser content view
+        if (browserContentView) {
+            console.log('Loading URL in browserContentView:', normalizedUrl);
+            
+            try {
+                await browserContentView.webContents.loadURL(normalizedUrl);
+                console.log('Loaded URL in browserContentView successfully');
+            } catch (error) {
+                console.error('Error loading URL in browserContentView:', error);
+            }
+        } else {
+            console.error('No browser content view available');
+        }
     },
     
     async goBack() {
-        if (!browserState.state.activeTabId) {
+        if (!browserState.state.activeTabId || !browserContentView) {
             return;
         }
         
-        const activeTab = browserState.state.tabs.find(t => t.id === browserState.state.activeTabId);
-        if (!activeTab) {
+        const navHistory = browserContentView.webContents.navigationHistory;
+        if (!Boolean(navHistory.canGoBack)) {
             return;
         }
         
-        const navHistory = activeTab.browserView.webContents.navigationHistory;
-        if (!navHistory.canGoBack) {
-            return;
-        }
+        console.log('Going back in browserContentView');
         
-        await activeTab.browserView.webContents.goBack();
+        try {
+            await browserContentView.webContents.goBack();
+            console.log('Successfully went back in browserContentView');
+        } catch (error) {
+            console.error('Error going back in browserContentView:', error);
+        }
     },
     
     async goForward() {
-        if (!browserState.state.activeTabId) {
+        if (!browserState.state.activeTabId || !browserContentView) {
             return;
         }
         
-        const activeTab = browserState.state.tabs.find(t => t.id === browserState.state.activeTabId);
-        if (!activeTab) {
+        const navHistory = browserContentView.webContents.navigationHistory;
+        if (!Boolean(navHistory.canGoForward)) {
             return;
         }
         
-        const navHistory = activeTab.browserView.webContents.navigationHistory;
-        if (!navHistory.canGoForward) {
-            return;
-        }
+        console.log('Going forward in browserContentView');
         
-        await activeTab.browserView.webContents.goForward();
+        try {
+            await browserContentView.webContents.goForward();
+            console.log('Successfully went forward in browserContentView');
+        } catch (error) {
+            console.error('Error going forward in browserContentView:', error);
+        }
     },
     
     async reload() {
-        if (!browserState.state.activeTabId) {
+        if (!browserState.state.activeTabId || !browserContentView) {
             return;
         }
         
-        const activeTab = browserState.state.tabs.find(t => t.id === browserState.state.activeTabId);
-        if (!activeTab) {
-            return;
-        }
+        console.log('Reloading browserContentView');
         
-        activeTab.browserView.webContents.reload();
+        try {
+            browserContentView.webContents.reload();
+            console.log('Successfully reloaded browserContentView');
+        } catch (error) {
+            console.error('Error reloading browserContentView:', error);
+        }
     },
     
     // Call this when window size changes or sidebar visibility changes
@@ -412,20 +405,19 @@ export const browserFunctions = {
             return;
         }
         
-        const activeTab = browserState.state.tabs.find(t => t.id === browserState.state.activeTabId);
-        if (!activeTab) {
+        if (!browserContentView) {
             return;
         }
         
-        const contentBounds = mainWindow.getContentBounds();
-        const headerHeight = 85; // Combined height of tab bar (40px) and navigation bar (45px)
-        const effectiveSidebarWidth = sidebarVisible ? sidebarWidth : 0;
+        // In BaseWindow + WebContentsView architecture, window layout is handled by the window manager
+        console.log(`Sidebar state updated: visible=${sidebarVisible}, width=${sidebarWidth}`);
         
-        activeTab.browserView.setBounds({
-            x: 0, 
-            y: headerHeight,
-            width: contentBounds.width - effectiveSidebarWidth,
-            height: contentBounds.height - headerHeight
-        });
+        // Notify the UI of the updated sidebar state
+        if (mainUIWebContents) {
+            mainUIWebContents.send("browser:sidebar-state-updated", {
+                visible: sidebarVisible,
+                width: sidebarWidth
+            });
+        }
     }
 };

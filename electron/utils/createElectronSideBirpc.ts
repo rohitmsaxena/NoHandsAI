@@ -1,4 +1,4 @@
-import {BrowserWindow, ipcMain} from "electron";
+import {WebContents, ipcMain} from "electron";
 import {createBirpc} from "birpc";
 
 export function createElectronSideBirpc<
@@ -7,13 +7,14 @@ export function createElectronSideBirpc<
 >(
     toRendererEventName: string,
     fromRendererEventName: string,
-    window: BrowserWindow,
+    webContents: WebContents,
     electronFunctions: ElectronFunctions
 ) {
     return createBirpc<RendererFunction, ElectronFunctions>(electronFunctions, {
-        post: (data) => window.webContents.send(toRendererEventName, data),
+        post: (data) => webContents.send(toRendererEventName, data),
         on: (onData) => ipcMain.on(fromRendererEventName, (event, data) => {
-            if (BrowserWindow.fromWebContents(event.sender) === window)
+            // In Electron 35+, we compare the WebContents directly
+            if (event.sender === webContents)
                 onData(data);
         }),
         serialize: (value) => JSON.stringify(value),

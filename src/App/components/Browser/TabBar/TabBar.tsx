@@ -1,12 +1,12 @@
 import {useCallback} from "react";
+import classNames from "classnames";
 import {BrowserTab} from "../../../../state/browserState.ts";
 import {electronBrowserRpc} from "../../../../rpc/browserRpc.ts";
-import classNames from "classnames";
 import "./TabBar.css";
 
 interface TabBarProps {
-    tabs: BrowserTab[];
-    activeTabId: string | null;
+    tabs: BrowserTab[],
+    activeTabId: string | null
 }
 
 export function TabBar({tabs, activeTabId}: TabBarProps) {
@@ -41,8 +41,8 @@ export function TabBar({tabs, activeTabId}: TabBarProps) {
                             onClick={(e) => handleCloseTab(e, tab.id)}
                         >
                             <svg className="tabCloseIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </div>
                     </div>
@@ -50,8 +50,8 @@ export function TabBar({tabs, activeTabId}: TabBarProps) {
             </div>
             <div className="newTabButton" onClick={handleNewTab}>
                 <svg className="newTabIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             </div>
         </div>

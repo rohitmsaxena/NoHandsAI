@@ -1,7 +1,6 @@
 import {createRendererSideBirpc} from "../utils/createRendererSideBirpc.ts";
-import {browserState} from "../state/browserState.ts";
+import {browserState, type BrowserState} from "../state/browserState.ts";
 import {ElectronBrowserFunctions} from "../../electron/rpc/browserRpc.ts";
-import type {BrowserState} from "../state/browserState.ts";
 
 export const renderedBrowserFunctions = {
     updateBrowserState(state: BrowserState) {

@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import {BrowserWindow, dialog} from "electron";
+import {WebContentsView, dialog} from "electron";
 import {createElectronSideBirpc} from "../utils/createElectronSideBirpc.ts";
 import {llmFunctions, llmState} from "../state/llmState.ts";
 import type {RenderedFunctions} from "../../src/rpc/llmRpc.ts";
@@ -58,8 +58,8 @@ export class ElectronLlmRpc {
         resetChatHistory: llmFunctions.chatSession.resetChatHistory
     } as const;
 
-    public constructor(window: BrowserWindow) {
-        this.rendererLlmRpc = createElectronSideBirpc<RenderedFunctions, typeof this.functions>("llmRpc", "llmRpc", window, this.functions);
+    public constructor(view: WebContentsView) {
+        this.rendererLlmRpc = createElectronSideBirpc<RenderedFunctions, typeof this.functions>("llmRpc", "llmRpc", view.webContents, this.functions);
 
         this.sendCurrentLlmState = this.sendCurrentLlmState.bind(this);
 
@@ -74,8 +74,8 @@ export class ElectronLlmRpc {
 
 export type ElectronFunctions = typeof ElectronLlmRpc.prototype.functions;
 
-export function registerLlmRpc(window: BrowserWindow) {
-    new ElectronLlmRpc(window);
+export function registerLlmRpc(view: WebContentsView) {
+    new ElectronLlmRpc(view);
 }
 
 async function pathExists(path: string) {

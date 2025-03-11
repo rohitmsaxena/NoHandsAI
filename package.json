@@ -37,13 +37,13 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^3.0.1",
+    "@stylistic/eslint-plugin": "^4.2.0",
     "@types/markdown-it": "^14.1.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@types/semver": "^7.5.8",
     "@vitejs/plugin-react": "^4.3.4",
-    "electron": "^34.0.2",
+    "electron": "^35.0.1",
     "electron-builder": "^25.1.8",
     "eslint": "^9.19.0",
     "eslint-import-resolver-typescript": "^3.7.0",
