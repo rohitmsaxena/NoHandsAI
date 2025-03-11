@@ -55,28 +55,6 @@ function createWindow() {
         minHeight: 600
     });
     
-    // Create a parent WebContentsView to serve as the container for all other views
-    // We set transparent: true to ensure clicks pass through to the child views
-    const parentView = new WebContentsView({
-        webPreferences: {
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true,
-            transparent: true
-        }
-    });
-    
-    // Set the parent view as the window's content view
-    win.setContentView(parentView);
-    
-    // Set up the parent view to be completely transparent and ignore input
-    parentView.webContents.loadURL('data:text/html,<!DOCTYPE html><html><head><style>html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; pointer-events: none; }</style></head><body></body></html>');
-        
-    // Make the parent view transparent to let the child views handle events
-    // parentView.webContents.on('did-finish-load', () => {
-    //     parentView.webContents.setBackgroundColor('#00000000');
-    // });
-    
     // Create the main UI WebContentsView that will contain app UI (including toolbar and tabs)
     const mainView = new WebContentsView({
         webPreferences: {
@@ -99,8 +77,8 @@ function createWindow() {
     });
     
     // Add both views as children of the parent view
-    parentView.addChildView(mainView);
-    parentView.addChildView(contentView);
+    win.contentView.addChildView(mainView);
+    win.contentView.addChildView(contentView);
     
     // Position the views correctly
     const headerHeight = 85; // Combined height of tab bar (40px) and navigation bar (45px)
@@ -109,7 +87,7 @@ function createWindow() {
     mainView.setBounds({ x: 0, y: 0, width: 1280, height: headerHeight });
     
     // Position the browser content view beneath the header area 
-    contentView.setBounds({ x: 0, y: headerHeight, width: 1280, height: 800 - headerHeight });
+    contentView.setBounds({ x: 0, y: headerHeight, width: 1280, height: 800 - headerHeight});
     
     // Ensure the child views handle pointer events properly
     mainView.webContents.on('dom-ready', () => {
@@ -121,11 +99,11 @@ function createWindow() {
     });
     
     // Add a resize handler to update the view sizes when the window size changes
-    // win.on("resize", () => {
-    //     const bounds = win.getBounds();
-    //     mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
-    //     contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight });
-    // });
+    win.on("resize", () => {
+        const bounds = win?.getBounds();
+        mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
+        contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight });
+    });
     
     // Register RPCs with the main view's WebContents
     registerLlmRpc(mainView);
