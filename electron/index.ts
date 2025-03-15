@@ -6,15 +6,6 @@ import {registerBrowserRpc} from "./rpc/browserRpc.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── index.js
-// │ │ └── preload.mjs
-// │
 process.env.APP_ROOT = path.join(__dirname, "..");
 
 export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -25,16 +16,17 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     ? path.join(process.env.APP_ROOT, "public")
     : RENDERER_DIST;
 
-let win: BaseWindow | null;
+let baseWindow: BaseWindow | null;
 
 // Enable webview and other security features
 app.on("web-contents-created", (_, contents) => {
-    // Set secure defaults for webview
-    contents.on("will-attach-webview", (event, webPreferences, params) => {
-        delete webPreferences.preload;
-        webPreferences.nodeIntegration = false;
-        webPreferences.contextIsolation = true;
-    });
+    console.log('web-contents-created!')
+    // // Set secure defaults for webview
+    // contents.on("will-attach-webview", (event, webPreferences, params) => {
+    //     delete webPreferences.preload;
+    //     webPreferences.nodeIntegration = false;
+    //     webPreferences.contextIsolation = true;
+    // });
 
     // Handle new windows securely
     contents.setWindowOpenHandler(({url}) => {
@@ -48,7 +40,7 @@ app.on("web-contents-created", (_, contents) => {
 
 function createWindow() {
     // Create a BaseWindow (proper Electron 35 approach)
-    win = new BaseWindow({
+    baseWindow = new BaseWindow({
         width: 1280,
         height: 800,
         minWidth: 800,
@@ -56,7 +48,7 @@ function createWindow() {
     });
     
     // Create the main UI WebContentsView that will contain app UI (including toolbar and tabs)
-    const mainView = new WebContentsView({
+    const toolbar = new WebContentsView({
         webPreferences: {
             preload: path.join(__dirname, "preload.mjs"),
             contextIsolation: true,
@@ -67,7 +59,7 @@ function createWindow() {
     
     // Create separate WebContentsView for web page content
     // This view will be managed by browserState.ts and switched when tabs change
-    const contentView = new WebContentsView({
+    const contentPage = new WebContentsView({
         webPreferences: {
             contextIsolation: true,
             nodeIntegration: false,
@@ -77,52 +69,43 @@ function createWindow() {
     });
     
     // Add both views as children of the parent view
-    win.contentView.addChildView(mainView);
-    win.contentView.addChildView(contentView);
+    baseWindow.contentView.addChildView(toolbar);
+    baseWindow.contentView.addChildView(contentPage);
     
     // Position the views correctly
     const headerHeight = 85; // Combined height of tab bar (40px) and navigation bar (45px)
     
     // Position the main view at the top for toolbar and tabs
-    mainView.setBounds({ x: 0, y: 0, width: 1280, height: headerHeight});
+    toolbar.setBounds({ x: 0, y: 0, width: 1280, height: headerHeight});
 
     //todo: figure out why the additional 35 is needed.
 
     // Position the browser content view beneath the header area
-    contentView.setBounds({ x: 0, y: headerHeight, width: 1280, height: 800 - headerHeight - 35});
-    
-    // Ensure the child views handle pointer events properly
-    mainView.webContents.on('dom-ready', () => {
-        mainView.webContents.insertCSS('html, body { pointer-events: auto !important; }');
-    });
-    
-    contentView.webContents.on('dom-ready', () => {
-        contentView.webContents.insertCSS('html, body { pointer-events: auto !important; }');
-    });
-    
+    contentPage.setBounds({ x: 0, y: headerHeight, width: 1280, height: 800 - headerHeight - 35});
+
     // Add a resize handler to update the view sizes when the window size changes
-    win.on("resize", () => {
-        const bounds = win?.getBounds();
+    baseWindow.on("resize", () => {
+        const bounds = baseWindow?.getBounds();
         if (bounds) {
-            mainView.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
-            contentView.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight -35 });
+            toolbar.setBounds({ x: 0, y: 0, width: bounds.width, height: headerHeight });
+            contentPage.setBounds({ x: 0, y: headerHeight, width: bounds.width, height: bounds.height - headerHeight -35 });
         }
     });
     
     // Register RPCs with the main view's WebContents
-    registerLlmRpc(mainView);
-    registerBrowserRpc(mainView, win, contentView);
+    registerLlmRpc(toolbar);
+    registerBrowserRpc(toolbar, baseWindow, contentPage);
 
     // Test active push message to Renderer-process
-    mainView.webContents.on("did-finish-load", () => {
-        mainView.webContents.send("main-process-message", (new Date()).toLocaleString());
+    toolbar.webContents.on("did-finish-load", () => {
+        toolbar.webContents.send("main-process-message", (new Date()).toLocaleString());
     });
 
     // Load the application in the main WebContentsView
     if (VITE_DEV_SERVER_URL)
-        void mainView.webContents.loadURL(VITE_DEV_SERVER_URL);
+        void toolbar.webContents.loadURL(VITE_DEV_SERVER_URL);
     else
-        void mainView.webContents.loadFile(path.join(RENDERER_DIST, "index.html"));
+        void toolbar.webContents.loadFile(path.join(RENDERER_DIST, "index.html"));
 }
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -131,14 +114,14 @@ function createWindow() {
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
         app.quit();
-        win = null;
+        baseWindow = null;
     }
 });
 
 app.on("activate", () => {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (!win) {
+    if (!baseWindow) {
         createWindow();
     }
 });
