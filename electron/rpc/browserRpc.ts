@@ -2,6 +2,23 @@ import {ipcMain, WebContentsView, BaseWindow} from "electron";
 import {createElectronSideBirpc} from "../utils/createElectronSideBirpc.ts";
 import {browserFunctions, browserState} from "../state/browserState.ts";
 import type {RenderedBrowserFunctions} from "../../src/rpc/browserRpc.ts";
+import type {BrowserState} from "../../src/state/browserState.ts";
+
+// UI state type that excludes internal properties
+type BrowserUITab = {
+    id: string,
+    url: string,
+    title: string,
+    isLoading: boolean,
+    canGoBack: boolean,
+    canGoForward: boolean,
+    isActive: boolean
+};
+
+type BrowserUIState = {
+    tabs: BrowserUITab[],
+    activeTabId: string | null
+};
 
 export class ElectronBrowserRpc {
     public readonly rendererBrowserRpc: ReturnType<typeof createElectronSideBirpc<RenderedBrowserFunctions, typeof this.functions>>;
@@ -55,7 +72,7 @@ export class ElectronBrowserRpc {
         }
     } as const;
 
-    public constructor(view: WebContentsView, window: BaseWindow, contentView: WebContentsView) {
+    public constructor(view: WebContentsView, window: BaseWindow) {
         this.rendererBrowserRpc = createElectronSideBirpc<RenderedBrowserFunctions, typeof this.functions>(
             "browserRpc", 
             "browserRpc", 
@@ -65,8 +82,8 @@ export class ElectronBrowserRpc {
 
         this.sendCurrentBrowserState = this.sendCurrentBrowserState.bind(this);
         
-        // Initialize browser functionality with a single tab, passing the content view for browser tabs
-        browserFunctions.initialize(window, view, contentView, true);
+        // Initialize browser functionality with a single tab
+        browserFunctions.initialize(window, view.webContents, true);
         
         // Set up IPC handlers for browser navigation
         ipcMain.handle("browser:go-back", async () => {
@@ -105,20 +122,21 @@ export class ElectronBrowserRpc {
         window.on("resize", () => {
             if (browserState.state.activeTabId) {
                 const activeTab = browserState.state.tabs.find((t) => t.id === browserState.state.activeTabId);
-                if (activeTab) {
-                    // For BaseWindow + WebContentsView architecture, the resize is handled automatically
-                    // We might need to adjust layout or positioning based on the new size
-                    console.log('Window resized, BaseWindow will handle WebContentsView layout');
-                    
-                    // We could potentially add custom resize handling here if needed
-                    // But in most cases, the BaseWindow will handle the WebContentsView positioning
+                if (activeTab?.contentView) {
+                    const bounds = window.getBounds();
+                    activeTab.contentView.setBounds({
+                        x: 0,
+                        y: 88,
+                        width: bounds.width,
+                        height: bounds.height - 88
+                    });
                 }
             }
         });
     }
 
     public sendCurrentBrowserState() {
-        this.rendererBrowserRpc.updateBrowserState({
+        const uiState: BrowserState = {
             tabs: browserState.state.tabs.map((tab) => ({
                 id: tab.id,
                 url: tab.url,
@@ -129,21 +147,18 @@ export class ElectronBrowserRpc {
                 isActive: tab.id === browserState.state.activeTabId
             })),
             activeTabId: browserState.state.activeTabId
-        });
+        };
+        this.rendererBrowserRpc.updateBrowserState(uiState);
     }
 }
 
 export type ElectronBrowserFunctions = typeof ElectronBrowserRpc.prototype.functions;
 
-export function registerBrowserRpc(view: WebContentsView, win?: BaseWindow, contentView?: WebContentsView) {
+export function registerBrowserRpc(view: WebContentsView, win?: BaseWindow) {
     // If no window is provided, we can't initialize the browser rpc
     if (!win) {
         console.error("No BaseWindow provided to registerBrowserRpc");
         return;
     }
-    if (!contentView) {
-        console.error("No content WebContentsView provided to registerBrowserRpc");
-        return;
-    }
-    new ElectronBrowserRpc(view, win, contentView);
+    new ElectronBrowserRpc(view, win);
 }
