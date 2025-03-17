@@ -328,7 +328,8 @@ export const browserFunctions = {
             await activeTab.contentView.webContents.reload();
         }
     },
-    
+
+    // updates teh browser view bounds for when teh sidebar opens up
     updateBrowserViewBounds(visible: boolean, width: number) {
         if (!baseWindow || !browserState.state.activeTabId) {
             return;
@@ -338,10 +339,10 @@ export const browserFunctions = {
         if (activeTab?.contentView) {
             const bounds = baseWindow.getBounds();
             const contentBounds = {
-                x: visible ? width : 0,
-                y: 88,
-                width: bounds.width - (visible ? width : 0),
-                height: bounds.height - 88 - 28
+                x: 0,  // Keep content at the left edge regardless of sidebar visibility
+                y: 88, // Top position stays the same (below tab/nav bars)
+                width: bounds.width - (visible ? width : 0),  // Reduce width only when sidebar is visible
+                height: bounds.height - 88 - 28  // Height stays the same
             };
             activeTab.contentView.setBounds(contentBounds);
         }
