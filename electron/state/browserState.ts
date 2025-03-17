@@ -330,14 +330,11 @@ export const browserFunctions = {
     },
     
     updateBrowserViewBounds(visible: boolean, width: number) {
-        console.log("updatebrowser")
-
         if (!baseWindow || !browserState.state.activeTabId) {
             return;
         }
 
         const activeTab = browserState.state.tabs.find((tab) => tab.id === browserState.state.activeTabId);
-        activeTab?.contentView?.webContents.openDevTools({ mode: "detach"})
         if (activeTab?.contentView) {
             const bounds = baseWindow.getBounds();
             const contentBounds = {
