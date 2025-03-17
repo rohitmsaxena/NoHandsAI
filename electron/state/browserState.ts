@@ -1,21 +1,8 @@
 import {State} from "lifecycle-utils";
 import {BaseWindow, WebContents, WebContentsView} from "electron";
 import {v4 as uuidv4} from "uuid";
+import {BrowserState, BrowserTab} from "../types/browserTab.ts";
 
-export type BrowserTab = {
-    id: string,
-    url: string,
-    title: string,
-    isLoading: boolean,
-    canGoBack: boolean,
-    canGoForward: boolean,
-    contentView: WebContentsView | null
-};
-
-export type BrowserState = {
-    tabs: BrowserTab[],
-    activeTabId: string | null
-};
 
 export const browserState = new State<BrowserState>({
     tabs: [],
@@ -33,7 +20,8 @@ function createWebContentsView(): WebContentsView {
             contextIsolation: true,
             sandbox: true,
             spellcheck: true,
-            webSecurity: true
+            webSecurity: true,
+            devTools: true
         }
     });
     return view;
@@ -163,7 +151,7 @@ export const browserFunctions = {
     initialize(window: BaseWindow, mainView: WebContents, createInitialTab: boolean = false) {
         baseWindow = window;
         toolbarWebContents = mainView;
-        
+
         // Set up a default tab when initialized if requested
         if (createInitialTab && browserState.state.tabs.length === 0) {
             void browserFunctions.createTab("https://www.google.com");
@@ -280,7 +268,7 @@ export const browserFunctions = {
                 x: 0,
                 y: 88, // Adjust based on your UI layout (tab bar + navigation bar height)
                 width: bounds.width,
-                height: bounds.height - 88
+                height: bounds.height - 88 - 28
             };
             tab.contentView.setBounds(contentBounds);
             
@@ -319,7 +307,7 @@ export const browserFunctions = {
         // Load the URL in the active tab's WebContentsView
         await activeTab.contentView.webContents.loadURL(normalizedUrl);
     },
-    
+
     async goBack() {
         const activeTab = browserState.state.tabs.find((tab) => tab.id === browserState.state.activeTabId);
         if (activeTab?.contentView?.webContents.canGoBack()) {
@@ -342,18 +330,21 @@ export const browserFunctions = {
     },
     
     updateBrowserViewBounds(visible: boolean, width: number) {
+        console.log("updatebrowser")
+
         if (!baseWindow || !browserState.state.activeTabId) {
             return;
         }
-        
+
         const activeTab = browserState.state.tabs.find((tab) => tab.id === browserState.state.activeTabId);
+        activeTab?.contentView?.webContents.openDevTools({ mode: "detach"})
         if (activeTab?.contentView) {
             const bounds = baseWindow.getBounds();
             const contentBounds = {
                 x: visible ? width : 0,
                 y: 88,
                 width: bounds.width - (visible ? width : 0),
-                height: bounds.height - 88
+                height: bounds.height - 88 - 28
             };
             activeTab.contentView.setBounds(contentBounds);
         }

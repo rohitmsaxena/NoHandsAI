@@ -1,24 +1,8 @@
-import {ipcMain, WebContentsView, BaseWindow} from "electron";
+import {BaseWindow, ipcMain, WebContentsView} from "electron";
 import {createElectronSideBirpc} from "../utils/createElectronSideBirpc.ts";
 import {browserFunctions, browserState} from "../state/browserState.ts";
 import type {RenderedBrowserFunctions} from "../../src/rpc/browserRpc.ts";
 import type {BrowserState} from "../../src/state/browserState.ts";
-
-// UI state type that excludes internal properties
-type BrowserUITab = {
-    id: string,
-    url: string,
-    title: string,
-    isLoading: boolean,
-    canGoBack: boolean,
-    canGoForward: boolean,
-    isActive: boolean
-};
-
-type BrowserUIState = {
-    tabs: BrowserUITab[],
-    activeTabId: string | null
-};
 
 export class ElectronBrowserRpc {
     public readonly rendererBrowserRpc: ReturnType<typeof createElectronSideBirpc<RenderedBrowserFunctions, typeof this.functions>>;
@@ -128,7 +112,7 @@ export class ElectronBrowserRpc {
                         x: 0,
                         y: 88,
                         width: bounds.width,
-                        height: bounds.height - 88
+                        height: bounds.height - 88 - 28
                     });
                 }
             }
