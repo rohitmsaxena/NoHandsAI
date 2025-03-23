@@ -1,8 +1,7 @@
-import {useState, useCallback, useEffect} from "react";
+import {useState, useCallback} from "react";
 import {useExternalState} from "../../../hooks/useExternalState.ts";
 import {browserState} from "../../../state/browserState.ts";
 import {electronBrowserRpc} from "../../../rpc/browserRpc.ts";
-import {Sidebar} from "../Sidebar/Sidebar.tsx";
 import {TabBar} from "./TabBar/TabBar.tsx";
 import {NavigationBar} from "./NavigationBar/NavigationBar.tsx";
 import "./Browser.css";
@@ -12,14 +11,14 @@ export function Browser() {
     const {tabs, activeTabId} = useExternalState(browserState);
     
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
-    
+
     const toggleSidebar = useCallback(() => {
         setIsSidebarVisible((prevVisible) => {
             const newVisible = !prevVisible;
-            
+
             // Notify the main process that the sidebar visibility has changed
             electronBrowserRpc.updateSidebarState(newVisible, newVisible ? 320 : 0);
-            
+
             return newVisible;
         });
     }, []);
@@ -52,8 +51,6 @@ export function Browser() {
                     )}
                     {/* The actual web content is rendered by the BrowserView in Electron */}
                 </div>
-                
-                {isSidebarVisible && <Sidebar />}
             </div>
         </div>
     );

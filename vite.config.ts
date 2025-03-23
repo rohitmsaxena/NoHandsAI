@@ -24,7 +24,13 @@ export default defineConfig({
     },
     build: {
         outDir: path.join(__dirname, "dist"),
-        target: "es2022"
+        target: "es2022",
+        rollupOptions: {
+            input: {
+                main: path.join(__dirname, "src/index.html"),
+                sidebar: path.join(__dirname, "src/sidebar.html")
+            }
+        }
     },
     root: path.join(__dirname, "src"),
     publicDir: path.join(__dirname, "public"),

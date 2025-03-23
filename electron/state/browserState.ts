@@ -3,7 +3,7 @@ import {State} from "lifecycle-utils";
 import {BaseWindow, WebContents, WebContentsView} from "electron";
 import {v4 as uuidv4} from "uuid";
 import {BrowserState, BrowserTab} from "../types/browserTab.ts";
-import {RENDERER_DIST} from "../index.ts";
+import {RENDERER_DIST, VITE_DEV_SERVER_URL} from "../index.ts";
 
 
 export const browserState = new State<BrowserState>({
@@ -355,9 +355,15 @@ export const browserFunctions = {
         });
 
         // Load sidebar content if it's becoming visible
-        if (visible && sidebarView.webContents.getURL() === '') {
-            // Load the sidebar HTML (we'll create this file in step 5)
-            void sidebarView.webContents.loadFile(path.join(RENDERER_DIST, "sidebar.html"));
+        if (visible && (sidebarView.webContents.getURL() === '' || !sidebarView.webContents.getURL().includes('sidebar.html'))) {
+            // Handle both development and production modes
+            if (VITE_DEV_SERVER_URL) {
+                // In development, load from dev server
+                void sidebarView.webContents.loadURL(`${VITE_DEV_SERVER_URL}sidebar.html`);
+            } else {
+                // In production, load from disk
+                void sidebarView.webContents.loadFile(path.join(RENDERER_DIST, "sidebar.html"));
+            }
         }
 
         const activeTab = browserState.state.tabs.find((tab) => tab.id === browserState.state.activeTabId);
