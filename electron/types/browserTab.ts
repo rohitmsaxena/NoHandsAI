@@ -7,10 +7,12 @@ export type BrowserTab = {
     isLoading: boolean,
     canGoBack: boolean,
     canGoForward: boolean,
-    contentView: WebContentsView | null
+    contentView: WebContentsView | null,
+    sidebarVisible: boolean
 };
 
 export type BrowserState = {
     tabs: BrowserTab[],
-    activeTabId: string | null
+    activeTabId: string | null,
+    sidebarVisible: boolean
 };

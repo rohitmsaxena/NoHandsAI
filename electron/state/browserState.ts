@@ -1,10 +1,13 @@
+import path from "node:path";
 import {State} from "lifecycle-utils";
 import {BaseWindow, WebContents, WebContentsView} from "electron";
 import {v4 as uuidv4} from "uuid";
 import {BrowserState, BrowserTab} from "../types/browserTab.ts";
+import {RENDERER_DIST} from "../index.ts";
 
 
 export const browserState = new State<BrowserState>({
+    sidebarVisible: false,
     tabs: [],
     activeTabId: null
 });
@@ -181,7 +184,8 @@ export const browserFunctions = {
                     isLoading: true,
                     canGoBack: false,
                     canGoForward: false,
-                    contentView: view
+                    contentView: view,
+                    sidebarVisible: false
                 }
             ],
             activeTabId: tabId
@@ -329,10 +333,31 @@ export const browserFunctions = {
         }
     },
 
-    // updates teh browser view bounds for when teh sidebar opens up
-    updateBrowserViewBounds(visible: boolean, width: number) {
+    // updates the browser view bounds for when teh sidebar opens up
+    updateBrowserViewBounds(visible: boolean, width: number, sidebarView: WebContentsView) {
         if (!baseWindow || !browserState.state.activeTabId) {
             return;
+        }
+
+        // Update sidebar state
+        browserState.state = {
+            ...browserState.state,
+            sidebarVisible: visible
+        };
+
+        // Update sidebar bounds
+        const bounds = baseWindow.getBounds();
+        sidebarView.setBounds({
+            x: bounds.width - (visible ? width : 0),
+            y: 88,
+            width: visible ? width : 0,
+            height: bounds.height - 88 - 28
+        });
+
+        // Load sidebar content if it's becoming visible
+        if (visible && sidebarView.webContents.getURL() === '') {
+            // Load the sidebar HTML (we'll create this file in step 5)
+            void sidebarView.webContents.loadFile(path.join(RENDERER_DIST, "sidebar.html"));
         }
 
         const activeTab = browserState.state.tabs.find((tab) => tab.id === browserState.state.activeTabId);

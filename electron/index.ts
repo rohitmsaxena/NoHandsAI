@@ -3,6 +3,7 @@ import path from "node:path";
 import {app, shell, BaseWindow, WebContentsView} from "electron";
 import {registerLlmRpc} from "./rpc/llmRpc.ts";
 import {registerBrowserRpc} from "./rpc/browserRpc.ts";
+import {browserState} from "./state/browserState.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,7 +40,7 @@ function createWindow() {
         minHeight: 600
     });
     
-    // Create the toolbar WebContentsView for UI (including toolbar and tabs)
+    // Toolbar with tabs and url toolbar
     const toolbar = new WebContentsView({
         webPreferences: {
             preload: path.join(__dirname, "preload.mjs"),
@@ -48,14 +49,25 @@ function createWindow() {
             sandbox: true
         }
     });
-    
-    // Add the toolbar view to the window
     baseWindow.contentView.addChildView(toolbar);
     toolbar.setBounds({ x: 0, y: 0, width: 1280, height: 88 }); // Height for tab bar (40px) + nav bar (48px)
+
+    // Sidebar
+    const sidebar = new WebContentsView({
+        webPreferences: {
+            preload: path.join(__dirname, "preload.mjs"),
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true
+        }
+    });
+    baseWindow.contentView.addChildView(sidebar);
+    sidebar.setBounds({x: 1290, y: 88, width: 0, height: 712});
+
     
     // Register RPCs with the toolbar's WebContents
-    registerLlmRpc(toolbar);
-    registerBrowserRpc(toolbar, baseWindow);
+    registerLlmRpc(sidebar);
+    registerBrowserRpc(toolbar, baseWindow, sidebar);
 
     // Test active push message to Renderer-process
     toolbar.webContents.on("did-finish-load", () => {
@@ -73,6 +85,16 @@ function createWindow() {
         const bounds = baseWindow?.getBounds();
         if (bounds) {
             toolbar.setBounds({ x: 0, y: 0, width: bounds.width, height: 88 });
+
+            // update sidebar bounds based on current state
+            const isSidebarVisible = browserState.state.sidebarVisible;
+            const sidebarWidth = isSidebarVisible ? 320 : 0;
+            sidebar.setBounds({
+                x: bounds.width - sidebarWidth,
+                y: 88,
+                width: sidebarWidth,
+                height: bounds.height - 88 - 28
+            });
         }
     });
 }

@@ -4,59 +4,89 @@ import {browserFunctions, browserState} from "../state/browserState.ts";
 import type {RenderedBrowserFunctions} from "../../src/rpc/browserRpc.ts";
 import type {BrowserState} from "../../src/state/browserState.ts";
 
+export interface ElectronBrowserFunctions {
+    createTab(url: string): Promise<string>;
+    closeTab(tabId: string): Promise<void>;
+    switchTab(tabId: string): Promise<void>;
+    loadURL(url: string): Promise<void>;
+    goBack(): Promise<void>;
+    goForward(): Promise<void>;
+    reload(): Promise<void>;
+    getState(): {
+        tabs: Array<{
+            id: string;
+            url: string;
+            title: string;
+            isLoading: boolean;
+            canGoBack: boolean;
+            canGoForward: boolean;
+            isActive: boolean;
+        }>;
+        activeTabId: string | null;
+    };
+    updateSidebarState(visible: boolean, width: number): void;
+}
+
 export class ElectronBrowserRpc {
     public readonly rendererBrowserRpc: ReturnType<typeof createElectronSideBirpc<RenderedBrowserFunctions, typeof this.functions>>;
 
-    public readonly functions = {
-        async createTab(url: string): Promise<string> {
-            return browserFunctions.createTab(url);
-        },
-        
-        async closeTab(tabId: string): Promise<void> {
-            return browserFunctions.closeTab(tabId);
-        },
-        
-        async switchTab(tabId: string): Promise<void> {
-            return browserFunctions.switchTab(tabId);
-        },
-        
-        async loadURL(url: string): Promise<void> {
-            return browserFunctions.loadURL(url);
-        },
-        
-        async goBack(): Promise<void> {
-            return browserFunctions.goBack();
-        },
-        
-        async goForward(): Promise<void> {
-            return browserFunctions.goForward();
-        },
-        
-        async reload(): Promise<void> {
-            return browserFunctions.reload();
-        },
-        
-        getState() {
-            return {
-                tabs: browserState.state.tabs.map((tab) => ({
-                    id: tab.id,
-                    url: tab.url,
-                    title: tab.title,
-                    isLoading: tab.isLoading,
-                    canGoBack: tab.canGoBack,
-                    canGoForward: tab.canGoForward,
-                    isActive: tab.id === browserState.state.activeTabId
-                })),
-                activeTabId: browserState.state.activeTabId
-            };
-        },
-        
-        updateSidebarState(visible: boolean, width: number): void {
-            browserFunctions.updateBrowserViewBounds(visible, width);
-        }
-    } as const;
+    private readonly sidebarView: WebContentsView;
+    public readonly functions: ElectronBrowserFunctions;
 
-    public constructor(view: WebContentsView, window: BaseWindow) {
+
+
+    public constructor(view: WebContentsView, window: BaseWindow, sidebarView: WebContentsView) {
+        this.sidebarView = sidebarView;
+
+        this.functions = {
+            async createTab(url: string): Promise<string> {
+                return browserFunctions.createTab(url);
+            },
+
+            async closeTab(tabId: string): Promise<void> {
+                return browserFunctions.closeTab(tabId);
+            },
+
+            async switchTab(tabId: string): Promise<void> {
+                return browserFunctions.switchTab(tabId);
+            },
+
+            async loadURL(url: string): Promise<void> {
+                return browserFunctions.loadURL(url);
+            },
+
+            async goBack(): Promise<void> {
+                return browserFunctions.goBack();
+            },
+
+            async goForward(): Promise<void> {
+                return browserFunctions.goForward();
+            },
+
+            async reload(): Promise<void> {
+                return browserFunctions.reload();
+            },
+
+            getState() {
+                return {
+                    tabs: browserState.state.tabs.map((tab) => ({
+                        id: tab.id,
+                        url: tab.url,
+                        title: tab.title,
+                        isLoading: tab.isLoading,
+                        canGoBack: tab.canGoBack,
+                        canGoForward: tab.canGoForward,
+                        isActive: tab.id === browserState.state.activeTabId
+                    })),
+                    activeTabId: browserState.state.activeTabId
+                };
+            },
+
+            updateSidebarState(visible: boolean, width: number): void {
+                browserFunctions.updateBrowserViewBounds(visible, width, sidebarView);
+            }
+        };
+
         this.rendererBrowserRpc = createElectronSideBirpc<RenderedBrowserFunctions, typeof this.functions>(
             "browserRpc", 
             "browserRpc", 
@@ -64,8 +94,10 @@ export class ElectronBrowserRpc {
             this.functions
         );
 
+
         this.sendCurrentBrowserState = this.sendCurrentBrowserState.bind(this);
-        
+
+
         // Initialize browser functionality with a single tab
         browserFunctions.initialize(window, view.webContents, true);
         
@@ -136,13 +168,6 @@ export class ElectronBrowserRpc {
     }
 }
 
-export type ElectronBrowserFunctions = typeof ElectronBrowserRpc.prototype.functions;
-
-export function registerBrowserRpc(view: WebContentsView, win?: BaseWindow) {
-    // If no window is provided, we can't initialize the browser rpc
-    if (!win) {
-        console.error("No BaseWindow provided to registerBrowserRpc");
-        return;
-    }
-    new ElectronBrowserRpc(view, win);
+export function registerBrowserRpc(view: WebContentsView, win: BaseWindow, sidebarView: WebContentsView) {
+    new ElectronBrowserRpc(view, win, sidebarView);
 }
