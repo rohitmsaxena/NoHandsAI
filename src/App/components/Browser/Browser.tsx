@@ -1,3 +1,4 @@
+// src/App/components/Browser/Browser.tsx
 import {useState, useCallback} from "react";
 import {useExternalState} from "../../../hooks/useExternalState.ts";
 import {browserState} from "../../../state/browserState.ts";
@@ -9,27 +10,27 @@ import "./Browser.css";
 export function Browser() {
     const [isSidebarVisible, setIsSidebarVisible] = useState(false);
     const {tabs, activeTabId} = useExternalState(browserState);
-    
+
     const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
     const toggleSidebar = useCallback(() => {
         setIsSidebarVisible((prevVisible) => {
             const newVisible = !prevVisible;
+            // Use a constant width for the sidebar when visible
+            const sidebarWidth = 320;
 
             // Notify the main process that the sidebar visibility has changed
-            electronBrowserRpc.updateSidebarState(newVisible, newVisible ? 320 : 0);
+            void electronBrowserRpc.updateSidebarState(newVisible, sidebarWidth);
 
             return newVisible;
         });
     }, []);
-    
-    // Let the main process handle initial tab creation
-    
+
     return (
         <div className="browserContainer">
             <TabBar tabs={tabs} activeTabId={activeTabId} />
-            
-            <NavigationBar 
+
+            <NavigationBar
                 url={activeTab?.url || ""}
                 canGoBack={activeTab?.canGoBack || false}
                 canGoForward={activeTab?.canGoForward || false}
@@ -37,7 +38,7 @@ export function Browser() {
                 isSidebarVisible={isSidebarVisible}
                 onToggleSidebar={toggleSidebar}
             />
-            
+
             <div className="browserContent">
                 <div className="webContent">
                     {!activeTab && (
@@ -49,7 +50,7 @@ export function Browser() {
                             <p>No active tab</p>
                         </div>
                     )}
-                    {/* The actual web content is rendered by the BrowserView in Electron */}
+                    {/* The actual web content is rendered by the WebContentsView in Electron */}
                 </div>
             </div>
         </div>

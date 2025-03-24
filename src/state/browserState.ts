@@ -13,6 +13,7 @@ export type BrowserTab = {
 export type BrowserState = {
     tabs: BrowserTab[],
     activeTabId: string | null
+    // Note: sidebarVisible is handled locally in Browser.tsx component for now
 };
 
 export const browserState = new State<BrowserState>({

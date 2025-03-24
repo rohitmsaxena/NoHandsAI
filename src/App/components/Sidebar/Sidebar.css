@@ -1,8 +1,9 @@
+/* src/App/components/Sidebar/Sidebar.css */
 .sidebar {
     display: flex;
     flex-direction: column;
-    width: 320px;
-    height: 100%;
+    width: 100%; /* Take full width of container */
+    height: 100vh; /* Full viewport height */
     background-color: #f0f0f0;
     border-left: 2px solid #ccc;
     overflow: hidden;
@@ -16,6 +17,20 @@
     padding: 12px 15px;
     background-color: #e0e0e0;
     border-bottom: 1px solid #ccc;
+    /* Ensure this matches with the styles for the tab bar */
+    height: 40px; /* Match tab bar height */
+    box-sizing: border-box;
+}
+
+.sidebarSubheader {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: #e8e8e8;
+    border-bottom: 1px solid #ccc;
+    /* Match the navigation bar height */
+    height: 48px; /* Match navigation bar height */
+    box-sizing: border-box;
 }
 
 .sidebarTitle {

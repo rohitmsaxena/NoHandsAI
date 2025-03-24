@@ -39,7 +39,7 @@ function createWindow() {
         minWidth: 800,
         minHeight: 600
     });
-    
+
     // Toolbar with tabs and url toolbar
     const toolbar = new WebContentsView({
         webPreferences: {
@@ -50,7 +50,6 @@ function createWindow() {
         }
     });
     baseWindow.contentView.addChildView(toolbar);
-    toolbar.setBounds({ x: 0, y: 0, width: 1280, height: 88 }); // Height for tab bar (40px) + nav bar (48px)
 
     // Sidebar
     const sidebar = new WebContentsView({
@@ -62,9 +61,25 @@ function createWindow() {
         }
     });
     baseWindow.contentView.addChildView(sidebar);
-    sidebar.setBounds({x: 1290, y: 88, width: 0, height: 712});
 
-    
+    // Initially position sidebar off-screen (or with zero width)
+    // We'll start with a sidebar width of 0 (hidden)
+    const initialBounds = baseWindow.getBounds();
+    toolbar.setBounds({
+        x: 0,
+        y: 0,
+        width: initialBounds.width,
+        height: 88  // Height for tab bar (40px) + nav bar (48px)
+    });
+
+    // Position sidebar off-screen initially
+    sidebar.setBounds({
+        x: initialBounds.width,
+        y: 0,  // Start from the top of the window
+        width: 0,  // Start with zero width (hidden)
+        height: initialBounds.height // Full window height
+    });
+
     // Register RPCs with the toolbar's WebContents
     registerLlmRpc(sidebar);
     registerBrowserRpc(toolbar, baseWindow, sidebar);
@@ -79,22 +94,41 @@ function createWindow() {
         void toolbar.webContents.loadURL(VITE_DEV_SERVER_URL);
     else
         void toolbar.webContents.loadFile(path.join(RENDERER_DIST, "index.html"));
-        
+
     // Handle window resizing
     baseWindow.on("resize", () => {
         const bounds = baseWindow?.getBounds();
         if (bounds) {
-            toolbar.setBounds({ x: 0, y: 0, width: bounds.width, height: 88 });
-
-            // update sidebar bounds based on current state
+            // Update based on sidebar visibility
             const isSidebarVisible = browserState.state.sidebarVisible;
             const sidebarWidth = isSidebarVisible ? 320 : 0;
+
+            // Adjust toolbar width to not overlap with sidebar
+            toolbar.setBounds({
+                x: 0,
+                y: 0,
+                width: bounds.width - sidebarWidth,
+                height: 88
+            });
+
+            // Update sidebar position
             sidebar.setBounds({
                 x: bounds.width - sidebarWidth,
-                y: 88,
+                y: 0, // Start from the top of the window
                 width: sidebarWidth,
-                height: bounds.height - 88 - 28
+                height: bounds.height // Full window height
             });
+
+            // Update active tab bounds if needed
+            const activeTab = browserState.state.tabs.find(tab => tab.id === browserState.state.activeTabId);
+            if (activeTab?.contentView) {
+                activeTab.contentView.setBounds({
+                    x: 0,
+                    y: 88, // Below tab and navigation bars
+                    width: bounds.width - sidebarWidth,
+                    height: bounds.height - 88 - 28 // Account for status bar
+                });
+            }
         }
     });
 }

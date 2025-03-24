@@ -99,7 +99,7 @@ export class ElectronBrowserRpc {
 
 
         // Initialize browser functionality with a single tab
-        browserFunctions.initialize(window, view.webContents, true);
+        browserFunctions.initialize(window, view, true);
         
         // Set up IPC handlers for browser navigation
         ipcMain.handle("browser:go-back", async () => {
