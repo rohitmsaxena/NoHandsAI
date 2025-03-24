@@ -420,7 +420,7 @@ export const browserFunctions = {
             x: bounds.width - sidebarWidth,
             y: 0, // Start from the top of the window
             width: sidebarWidth,
-            height: bounds.height // Full window height
+            height: bounds.height - 28 // Full window height
         });
 
         // Load sidebar content if it's becoming visible
