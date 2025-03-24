@@ -126,3 +126,28 @@
 .modelLoadButton:hover {
     background-color: #0062b1;
 }
+
+.resetButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: #999;
+}
+
+.resetIcon {
+    width: 16px;
+    height: 16px;
+    color: #555;
+}

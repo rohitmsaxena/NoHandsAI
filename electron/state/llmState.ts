@@ -6,6 +6,8 @@ import {
 import {withLock, State} from "lifecycle-utils";
 import packageJson from "../../package.json";
 import {modelFunctions} from "../llm/modelFunctions.js";
+import {logModelResponse, logPrompt} from "../llm/debugUtils.ts";
+import {DEFAULT_SYSTEM_PROMPT} from "../llm/systemPrompt.ts";
 
 export const llmState = new State<LlmState>({
     appVersion: packageJson.version,
@@ -277,6 +279,144 @@ export const llmFunctions = {
         });
     },
     chatSession: {
+        // async createChatSession() {
+        //     await withLock(llmFunctions, "chatSession", async () => {
+        //         if (contextSequence == null)
+        //             throw new Error("Context sequence not loaded");
+        //
+        //         if (chatSession != null) {
+        //             try {
+        //                 chatSession.dispose();
+        //                 chatSession = null;
+        //                 chatSessionCompletionEngine = null;
+        //             } catch (err) {
+        //                 console.error("Failed to dispose chat session", err);
+        //             }
+        //         }
+        //
+        //         try {
+        //             llmState.state = {
+        //                 ...llmState.state,
+        //                 chatSession: {
+        //                     loaded: false,
+        //                     generatingResult: false,
+        //                     simplifiedChat: [],
+        //                     draftPrompt: llmState.state.chatSession.draftPrompt
+        //                 }
+        //             };
+        //
+        //             llmFunctions.chatSession.resetChatHistory(false);
+        //
+        //             try {
+        //                 await chatSession?.preloadPrompt("", {
+        //                     signal: promptAbortController?.signal
+        //                 });
+        //             } catch (err) {
+        //                 // do nothing
+        //             }
+        //             chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt);
+        //
+        //             llmState.state = {
+        //                 ...llmState.state,
+        //                 chatSession: {
+        //                     ...llmState.state.chatSession,
+        //                     loaded: true
+        //                 }
+        //             };
+        //         } catch (err) {
+        //             console.error("Failed to create chat session", err);
+        //             llmState.state = {
+        //                 ...llmState.state,
+        //                 chatSession: {
+        //                     loaded: false,
+        //                     generatingResult: false,
+        //                     simplifiedChat: [],
+        //                     draftPrompt: llmState.state.chatSession.draftPrompt
+        //                 }
+        //             };
+        //         }
+        //     });
+        // },
+        // async prompt(message: string) {
+        //     await withLock(llmFunctions, "chatSession", async () => {
+        //         if (chatSession == null)
+        //             throw new Error("Chat session not loaded");
+        //
+        //         llmState.state = {
+        //             ...llmState.state,
+        //             chatSession: {
+        //                 ...llmState.state.chatSession,
+        //                 generatingResult: true,
+        //                 draftPrompt: {
+        //                     prompt: "",
+        //                     completion: ""
+        //                 }
+        //             }
+        //         };
+        //         promptAbortController = new AbortController();
+        //
+        //         llmState.state = {
+        //             ...llmState.state,
+        //             chatSession: {
+        //                 ...llmState.state.chatSession,
+        //                 simplifiedChat: getSimplifiedChatHistory(true, message)
+        //             }
+        //         };
+        //
+        //         const abortSignal = promptAbortController.signal;
+        //         try {
+        //             await chatSession.prompt(message, {
+        //                 signal: abortSignal,
+        //                 stopOnAbortSignal: true,
+        //                 functions: modelFunctions,
+        //                 onResponseChunk(chunk) {
+        //                     inProgressResponse = squashMessageIntoModelChatMessages(
+        //                         inProgressResponse,
+        //                         (chunk.type == null || chunk.segmentType == null)
+        //                             ? {
+        //                                 type: "text",
+        //                                 text: chunk.text
+        //                             }
+        //                             : {
+        //                                 type: "segment",
+        //                                 segmentType: chunk.segmentType,
+        //                                 text: chunk.text,
+        //                                 startTime: chunk.segmentStartTime?.toISOString(),
+        //                                 endTime: chunk.segmentEndTime?.toISOString()
+        //                             }
+        //                     );
+        //
+        //                     llmState.state = {
+        //                         ...llmState.state,
+        //                         chatSession: {
+        //                             ...llmState.state.chatSession,
+        //                             simplifiedChat: getSimplifiedChatHistory(true, message)
+        //                         }
+        //                     };
+        //                 }
+        //             });
+        //         } catch (err) {
+        //             if (err !== abortSignal.reason)
+        //                 throw err;
+        //
+        //             // if the prompt was aborted before the generation even started, we ignore the error
+        //         }
+        //
+        //         llmState.state = {
+        //             ...llmState.state,
+        //             chatSession: {
+        //                 ...llmState.state.chatSession,
+        //                 generatingResult: false,
+        //                 simplifiedChat: getSimplifiedChatHistory(false),
+        //                 draftPrompt: {
+        //                     ...llmState.state.chatSession.draftPrompt,
+        //                     completion: chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt) ?? ""
+        //                 }
+        //             }
+        //         };
+        //         inProgressResponse = [];
+        //     });
+        // },
         async createChatSession() {
             await withLock(llmFunctions, "chatSession", async () => {
                 if (contextSequence == null)
@@ -303,7 +443,32 @@ export const llmFunctions = {
                         }
                     };
 
-                    llmFunctions.chatSession.resetChatHistory(false);
+                    // Import the system prompt
+                    const {DEFAULT_SYSTEM_PROMPT} = await import("../llm/systemPrompt.js");
+
+                    // Create new chat session with system prompt
+                    chatSession = new LlamaChatSession({
+                        contextSequence,
+                        autoDisposeSequence: false,
+                        systemPrompt: DEFAULT_SYSTEM_PROMPT
+                    });
+
+                    chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
+                        onGeneration(prompt, completion) {
+                            if (llmState.state.chatSession.draftPrompt.prompt === prompt) {
+                                llmState.state = {
+                                    ...llmState.state,
+                                    chatSession: {
+                                        ...llmState.state.chatSession,
+                                        draftPrompt: {
+                                            prompt,
+                                            completion
+                                        }
+                                    }
+                                };
+                            }
+                        }
+                    });
 
                     try {
                         await chatSession?.preloadPrompt("", {
@@ -312,15 +477,36 @@ export const llmFunctions = {
                     } catch (err) {
                         // do nothing
                     }
-                    chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt);
 
+                    // Set the initial state
                     llmState.state = {
                         ...llmState.state,
                         chatSession: {
-                            ...llmState.state.chatSession,
-                            loaded: true
+                            loaded: true,
+                            generatingResult: false,
+                            simplifiedChat: [],
+                            draftPrompt: {
+                                prompt: llmState.state.chatSession.draftPrompt.prompt,
+                                completion: chatSessionCompletionEngine.complete(llmState.state.chatSession.draftPrompt.prompt) ?? ""
+                            }
                         }
                     };
+
+                    // Set up disposal listener
+                    chatSession.onDispose.createListener(() => {
+                        chatSessionCompletionEngine = null;
+                        promptAbortController = null;
+                        llmState.state = {
+                            ...llmState.state,
+                            chatSession: {
+                                loaded: false,
+                                generatingResult: false,
+                                simplifiedChat: [],
+                                draftPrompt: llmState.state.chatSession.draftPrompt
+                            }
+                        };
+                    });
+
                 } catch (err) {
                     console.error("Failed to create chat session", err);
                     llmState.state = {
@@ -340,6 +526,10 @@ export const llmFunctions = {
                 if (chatSession == null)
                     throw new Error("Chat session not loaded");
 
+                // Clear the in-progress response array
+                inProgressResponse = [];
+
+                // Update state to indicate generation is starting
                 llmState.state = {
                     ...llmState.state,
                     chatSession: {
@@ -351,19 +541,25 @@ export const llmFunctions = {
                         }
                     }
                 };
+
                 promptAbortController = new AbortController();
 
+                // Update state with the new message
+                const updatedChat = getSimplifiedChatHistory(true, message);
                 llmState.state = {
                     ...llmState.state,
                     chatSession: {
                         ...llmState.state.chatSession,
-                        simplifiedChat: getSimplifiedChatHistory(true, message)
+                        simplifiedChat: updatedChat
                     }
                 };
 
+                // Debug logging for the raw chat history
+                logPrompt(message, chatSession.getChatHistory());
+
                 const abortSignal = promptAbortController.signal;
                 try {
-                    await chatSession.prompt(message, {
+                    const response = await chatSession.prompt(message, {
                         signal: abortSignal,
                         stopOnAbortSignal: true,
                         functions: modelFunctions,
@@ -393,11 +589,16 @@ export const llmFunctions = {
                             };
                         }
                     });
-                } catch (err) {
-                    if (err !== abortSignal.reason)
-                        throw err;
 
-                    // if the prompt was aborted before the generation even started, we ignore the error
+                    // Log the complete response for debugging
+                    logModelResponse(response);
+
+                } catch (err) {
+                    if (err !== abortSignal.reason) {
+                        console.error("Error in LLM prompt:", err);
+                        throw err;
+                    }
+                    // If aborted, we don't throw
                 }
 
                 llmState.state = {
@@ -418,15 +619,89 @@ export const llmFunctions = {
         stopActivePrompt() {
             promptAbortController?.abort();
         },
+        // resetChatHistory(markAsLoaded: boolean = true) {
+        //     if (contextSequence == null)
+        //         return;
+        //
+        //     chatSession?.dispose();
+        //     chatSession = new LlamaChatSession({
+        //         contextSequence,
+        //         autoDisposeSequence: false,
+        //         // defaultSystemPrompt: "You are a helpful assistant. Answer questions directly and clearly.",
+        //         // chatFormat: "llama-3" // Use the appropriate format for your Llama 3 model
+        //     });
+        //
+        //     chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
+        //         onGeneration(prompt, completion) {
+        //             if (llmState.state.chatSession.draftPrompt.prompt === prompt) {
+        //                 llmState.state = {
+        //                     ...llmState.state,
+        //                     chatSession: {
+        //                         ...llmState.state.chatSession,
+        //                         draftPrompt: {
+        //                             prompt,
+        //                             completion
+        //                         }
+        //                     }
+        //                 };
+        //             }
+        //         }
+        //     });
+        //
+        //     llmState.state = {
+        //         ...llmState.state,
+        //         chatSession: {
+        //             loaded: markAsLoaded
+        //                 ? true
+        //                 : llmState.state.chatSession.loaded,
+        //             generatingResult: false,
+        //             simplifiedChat: [],
+        //             draftPrompt: {
+        //                 prompt: llmState.state.chatSession.draftPrompt.prompt,
+        //                 completion: chatSessionCompletionEngine.complete(llmState.state.chatSession.draftPrompt.prompt) ?? ""
+        //             }
+        //         }
+        //     };
+        //
+        //     chatSession.onDispose.createListener(() => {
+        //         chatSessionCompletionEngine = null;
+        //         promptAbortController = null;
+        //         llmState.state = {
+        //             ...llmState.state,
+        //             chatSession: {
+        //                 loaded: false,
+        //                 generatingResult: false,
+        //                 simplifiedChat: [],
+        //                 draftPrompt: llmState.state.chatSession.draftPrompt
+        //             }
+        //         };
+        //     });
+        // },
         resetChatHistory(markAsLoaded: boolean = true) {
+            console.log("Resetting chat history");
+
             if (contextSequence == null)
                 return;
 
-            chatSession?.dispose();
+            // Properly dispose of the existing chat session
+            if (chatSession) {
+                try {
+                    chatSession.dispose();
+                } catch (err) {
+                    console.error("Error disposing chat session:", err);
+                }
+            }
+
+            // Create a fresh chat session
             chatSession = new LlamaChatSession({
                 contextSequence,
                 autoDisposeSequence: false
             });
+
+            // Reset in-progress response array
+            inProgressResponse = [];
+
+            // Create new completion engine
             chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
                 onGeneration(prompt, completion) {
                     if (llmState.state.chatSession.draftPrompt.prompt === prompt) {
@@ -444,6 +719,7 @@ export const llmFunctions = {
                 }
             });
 
+            // Reset the state completely
             llmState.state = {
                 ...llmState.state,
                 chatSession: {
@@ -453,12 +729,13 @@ export const llmFunctions = {
                     generatingResult: false,
                     simplifiedChat: [],
                     draftPrompt: {
-                        prompt: llmState.state.chatSession.draftPrompt.prompt,
-                        completion: chatSessionCompletionEngine.complete(llmState.state.chatSession.draftPrompt.prompt) ?? ""
+                        prompt: "",
+                        completion: ""
                     }
                 }
             };
 
+            // Set up disposal listener
             chatSession.onDispose.createListener(() => {
                 chatSessionCompletionEngine = null;
                 promptAbortController = null;
@@ -468,10 +745,15 @@ export const llmFunctions = {
                         loaded: false,
                         generatingResult: false,
                         simplifiedChat: [],
-                        draftPrompt: llmState.state.chatSession.draftPrompt
+                        draftPrompt: {
+                            prompt: "",
+                            completion: ""
+                        }
                     }
                 };
             });
+
+            console.log("Chat history reset complete");
         },
         setDraftPrompt(prompt: string) {
             if (chatSessionCompletionEngine == null)
