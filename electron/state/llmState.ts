@@ -1,20 +1,21 @@
 import path from "node:path";
 import {
+    type ChatModelSegmentType,
+    GeneralChatWrapper,
     getLlama,
+    isChatModelResponseSegment,
     Llama,
     LlamaChatSession,
     LlamaChatSessionPromptCompletionEngine,
     LlamaContext,
     LlamaContextSequence,
-    LlamaModel,
-    isChatModelResponseSegment,
-    type ChatModelSegmentType,
-    GeneralChatWrapper
+    LlamaModel
 } from "node-llama-cpp";
-import {withLock, State} from "lifecycle-utils";
+import {State, withLock} from "lifecycle-utils";
 import packageJson from "../../package.json";
 import {modelFunctions} from "../llm/modelFunctions.js";
 import {DEFAULT_SYSTEM_PROMPT} from "../llm/systemPrompt.js";
+import {ModelManagementState} from "../types/llmRpcTypes.ts";
 
 export const llmState = new State<LlmState>({
     appVersion: packageJson.version,
@@ -41,6 +42,42 @@ export const llmState = new State<LlmState>({
     }
 });
 
+export type SimplifiedChatItem =
+    | SimplifiedUserChatItem
+    | SimplifiedModelChatItem;
+export type SimplifiedUserChatItem = {
+    type: "user",
+    message: string
+};
+export type SimplifiedModelChatItem = {
+    type: "model",
+    message: Array<
+        | {
+              type: "text",
+              text: string
+          }
+        | {
+              type: "segment",
+              segmentType: ChatModelSegmentType,
+              text: string,
+              startTime?: string,
+              endTime?: string
+          }
+    >
+};
+
+let llama: Llama | null = null;
+let model: LlamaModel | null = null;
+let context: LlamaContext | null = null;
+let contextSequence: LlamaContextSequence | null = null;
+
+let chatSession: LlamaChatSession | null = null;
+let chatSessionCompletionEngine: LlamaChatSessionPromptCompletionEngine | null =
+    null;
+let promptAbortController: AbortController | null = null;
+let inProgressResponse: SimplifiedModelChatItem["message"] = [];
+
+// Modify it to include modelManagement:
 export type LlmState = {
     appVersion?: string,
     llama: {
@@ -70,37 +107,9 @@ export type LlmState = {
             prompt: string,
             completion: string
         }
-    }
+    },
+    modelManagement?: ModelManagementState
 };
-
-export type SimplifiedChatItem = SimplifiedUserChatItem | SimplifiedModelChatItem;
-export type SimplifiedUserChatItem = {
-    type: "user",
-    message: string
-};
-export type SimplifiedModelChatItem = {
-    type: "model",
-    message: Array<{
-        type: "text",
-        text: string
-    } | {
-        type: "segment",
-        segmentType: ChatModelSegmentType,
-        text: string,
-        startTime?: string,
-        endTime?: string
-    }>
-};
-
-let llama: Llama | null = null;
-let model: LlamaModel | null = null;
-let context: LlamaContext | null = null;
-let contextSequence: LlamaContextSequence | null = null;
-
-let chatSession: LlamaChatSession | null = null;
-let chatSessionCompletionEngine: LlamaChatSessionPromptCompletionEngine | null = null;
-let promptAbortController: AbortController | null = null;
-let inProgressResponse: SimplifiedModelChatItem["message"] = [];
 
 export const llmFunctions = {
     async loadLlama() {
@@ -146,8 +155,7 @@ export const llmFunctions = {
     },
     async loadModel(modelPath: string) {
         await withLock(llmFunctions, "model", async () => {
-            if (llama == null)
-                throw new Error("Llama not loaded");
+            if (llama == null) throw new Error("Llama not loaded");
 
             if (model != null) {
                 try {
@@ -208,8 +216,7 @@ export const llmFunctions = {
     },
     async createContext() {
         await withLock(llmFunctions, "context", async () => {
-            if (model == null)
-                throw new Error("Model not loaded");
+            if (model == null) throw new Error("Model not loaded");
 
             if (context != null) {
                 try {
@@ -252,8 +259,7 @@ export const llmFunctions = {
     },
     async createContextSequence() {
         await withLock(llmFunctions, "contextSequence", async () => {
-            if (context == null)
-                throw new Error("Context not loaded");
+            if (context == null) throw new Error("Context not loaded");
 
             try {
                 llmState.state = {
@@ -320,22 +326,26 @@ export const llmFunctions = {
                         chatWrapper: new GeneralChatWrapper()
                     });
 
-                    chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
-                        onGeneration(prompt, completion) {
-                            if (llmState.state.chatSession.draftPrompt.prompt === prompt) {
-                                llmState.state = {
-                                    ...llmState.state,
-                                    chatSession: {
-                                        ...llmState.state.chatSession,
-                                        draftPrompt: {
-                                            prompt,
-                                            completion
+                    chatSessionCompletionEngine =
+                        chatSession.createPromptCompletionEngine({
+                            onGeneration(prompt, completion) {
+                                if (
+                                    llmState.state.chatSession.draftPrompt
+                                        .prompt === prompt
+                                ) {
+                                    llmState.state = {
+                                        ...llmState.state,
+                                        chatSession: {
+                                            ...llmState.state.chatSession,
+                                            draftPrompt: {
+                                                prompt,
+                                                completion
+                                            }
                                         }
-                                    }
-                                };
+                                    };
+                                }
                             }
-                        }
-                    });
+                        });
 
                     try {
                         await chatSession?.preloadPrompt("", {
@@ -344,7 +354,9 @@ export const llmFunctions = {
                     } catch (err) {
                         // do nothing
                     }
-                    chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt);
+                    chatSessionCompletionEngine?.complete(
+                        llmState.state.chatSession.draftPrompt.prompt
+                    );
 
                     llmState.state = {
                         ...llmState.state,
@@ -381,22 +393,25 @@ export const llmFunctions = {
                 // Log the current chat history in detail
                 console.log("\n=== DETAILED CHAT HISTORY ===");
                 const currentHistory = chatSession.getChatHistory();
-                console.log("Number of messages in history:", currentHistory.length);
+                console.log(
+                    "Number of messages in history:",
+                    currentHistory.length
+                );
 
                 // Log each message in the history
                 currentHistory.forEach((msg, index) => {
                     console.log(`Message ${index + 1}:`);
                     console.log(`  Type: ${msg.type}`);
 
-                    if (msg.type === 'system' || msg.type === 'user') {
+                    if (msg.type === "system" || msg.type === "user") {
                         console.log(`  Content: "${msg.text}"`);
-                    } else if (msg.type === 'model') {
+                    } else if (msg.type === "model") {
                         // For model responses, try to get the full text
-                        let responseText = '';
+                        let responseText = "";
                         responseText = String(msg.response);
                         console.log(`  Content: "${responseText}"`);
                     }
-                    console.log('---');
+                    console.log("---");
                 });
 
                 // Clear the in-progress response array
@@ -443,27 +458,34 @@ export const llmFunctions = {
                                 fullResponse += chunk.text;
                             }
 
-                            inProgressResponse = squashMessageIntoModelChatMessages(
-                                inProgressResponse,
-                                (chunk.type == null || chunk.segmentType == null)
-                                    ? {
-                                        type: "text",
-                                        text: chunk.text
-                                    }
-                                    : {
-                                        type: "segment",
-                                        segmentType: chunk.segmentType,
-                                        text: chunk.text,
-                                        startTime: chunk.segmentStartTime?.toISOString(),
-                                        endTime: chunk.segmentEndTime?.toISOString()
-                                    }
-                            );
+                            inProgressResponse =
+                                squashMessageIntoModelChatMessages(
+                                    inProgressResponse,
+                                    chunk.type == null ||
+                                        chunk.segmentType == null
+                                        ? {
+                                            type: "text",
+                                            text: chunk.text
+                                        }
+                                        : {
+                                            type: "segment",
+                                            segmentType: chunk.segmentType,
+                                            text: chunk.text,
+                                            startTime:
+                                                  chunk.segmentStartTime?.toISOString(),
+                                            endTime:
+                                                  chunk.segmentEndTime?.toISOString()
+                                        }
+                                );
 
                             llmState.state = {
                                 ...llmState.state,
                                 chatSession: {
                                     ...llmState.state.chatSession,
-                                    simplifiedChat: getSimplifiedChatHistory(true, message)
+                                    simplifiedChat: getSimplifiedChatHistory(
+                                        true,
+                                        message
+                                    )
                                 }
                             };
                         }
@@ -471,7 +493,6 @@ export const llmFunctions = {
 
                     console.log("\n=== MODEL RESPONSE COMPLETE ===");
                     console.log("Full response:", fullResponse);
-
                 } catch (err) {
                     if (err !== abortSignal.reason) {
                         console.error("\n=== ERROR IN LLM PROMPT ===");
@@ -491,7 +512,11 @@ export const llmFunctions = {
                         simplifiedChat: getSimplifiedChatHistory(false),
                         draftPrompt: {
                             ...llmState.state.chatSession.draftPrompt,
-                            completion: chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt) ?? ""
+                            completion:
+                                chatSessionCompletionEngine?.complete(
+                                    llmState.state.chatSession.draftPrompt
+                                        .prompt
+                                ) ?? ""
                         }
                     }
                 };
@@ -500,21 +525,24 @@ export const llmFunctions = {
                 // Log the updated chat history after completion
                 console.log("\n=== DETAILED UPDATED CHAT HISTORY ===");
                 const updatedHistory = chatSession.getChatHistory();
-                console.log("Number of messages in history:", updatedHistory.length);
+                console.log(
+                    "Number of messages in history:",
+                    updatedHistory.length
+                );
 
                 // Log each message in the updated history
                 updatedHistory.forEach((msg, index) => {
                     console.log(`Message ${index + 1}:`);
                     console.log(`  Type: ${msg.type}`);
 
-                    if (msg.type === 'system' || msg.type === 'user') {
+                    if (msg.type === "system" || msg.type === "user") {
                         console.log(`  Content: "${msg.text}"`);
-                    } else if (msg.type === 'model') {
+                    } else if (msg.type === "model") {
                         // For model responses, try to get the full text
                         const responseText = String(msg.response);
                         console.log(`  Content: "${responseText}"`);
                     }
-                    console.log('---');
+                    console.log("---");
                 });
 
                 console.log("=== END OF PROMPT CYCLE ===\n\n");
@@ -554,22 +582,26 @@ export const llmFunctions = {
             inProgressResponse = [];
 
             // Create new completion engine
-            chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
-                onGeneration(prompt, completion) {
-                    if (llmState.state.chatSession.draftPrompt.prompt === prompt) {
-                        llmState.state = {
-                            ...llmState.state,
-                            chatSession: {
-                                ...llmState.state.chatSession,
-                                draftPrompt: {
-                                    prompt,
-                                    completion
+            chatSessionCompletionEngine =
+                chatSession.createPromptCompletionEngine({
+                    onGeneration(prompt, completion) {
+                        if (
+                            llmState.state.chatSession.draftPrompt.prompt ===
+                            prompt
+                        ) {
+                            llmState.state = {
+                                ...llmState.state,
+                                chatSession: {
+                                    ...llmState.state.chatSession,
+                                    draftPrompt: {
+                                        prompt,
+                                        completion
+                                    }
                                 }
-                            }
-                        };
+                            };
+                        }
                     }
-                }
-            });
+                });
 
             // Reset the state completely
             console.log("Resetting state");
@@ -610,8 +642,7 @@ export const llmFunctions = {
             console.log("Chat history reset complete");
         },
         setDraftPrompt(prompt: string) {
-            if (chatSessionCompletionEngine == null)
-                return;
+            if (chatSessionCompletionEngine == null) return;
 
             llmState.state = {
                 ...llmState.state,
@@ -619,7 +650,8 @@ export const llmFunctions = {
                     ...llmState.state.chatSession,
                     draftPrompt: {
                         prompt: prompt,
-                        completion: chatSessionCompletionEngine.complete(prompt) ?? ""
+                        completion:
+                            chatSessionCompletionEngine.complete(prompt) ?? ""
                     }
                 }
             };
@@ -627,46 +659,66 @@ export const llmFunctions = {
     }
 } as const;
 
-function getSimplifiedChatHistory(generatingResult: boolean, currentPrompt?: string) {
-    if (chatSession == null)
-        return [];
+function getSimplifiedChatHistory(
+    generatingResult: boolean,
+    currentPrompt?: string
+) {
+    if (chatSession == null) return [];
 
-    const chatHistory: SimplifiedChatItem[] = chatSession.getChatHistory()
+    const chatHistory: SimplifiedChatItem[] = chatSession
+        .getChatHistory()
         .flatMap((item): SimplifiedChatItem[] => {
-            if (item.type === "system")
-                return [];
+            if (item.type === "system") return [];
             else if (item.type === "user")
                 return [{type: "user", message: item.text}];
             else if (item.type === "model")
-                return [{
-                    type: "model",
-                    message: item.response
-                        .filter((item) => (typeof item === "string" || isChatModelResponseSegment(item)))
-                        .map((item): SimplifiedModelChatItem["message"][number] | null => {
-                            if (typeof item === "string")
-                                return {
-                                    type: "text",
-                                    text: item
-                                };
-                            else if (isChatModelResponseSegment(item))
-                                return {
-                                    type: "segment",
-                                    segmentType: item.segmentType,
-                                    text: item.text,
-                                    startTime: item.startTime,
-                                    endTime: item.endTime
-                                };
+                return [
+                    {
+                        type: "model",
+                        message: item.response
+                            .filter(
+                                (item) =>
+                                    typeof item === "string" ||
+                                    isChatModelResponseSegment(item)
+                            )
+                            .map(
+                                (
+                                    item
+                                ):
+                                    | SimplifiedModelChatItem["message"][number]
+                                    | null => {
+                                    if (typeof item === "string")
+                                        return {
+                                            type: "text",
+                                            text: item
+                                        };
+                                    else if (isChatModelResponseSegment(item))
+                                        return {
+                                            type: "segment",
+                                            segmentType: item.segmentType,
+                                            text: item.text,
+                                            startTime: item.startTime,
+                                            endTime: item.endTime
+                                        };
 
-                            void (item satisfies never); // ensure all item types are handled
-                            return null;
-                        })
-                        .filter((item) => item != null)
+                                    void (item satisfies never); // ensure all item types are handled
+                                    return null;
+                                }
+                            )
+                            .filter((item) => item != null)
 
-                        // squash adjacent response items of the same type
-                        .reduce((res, item) => {
-                            return squashMessageIntoModelChatMessages(res, item);
-                        }, [] as SimplifiedModelChatItem["message"])
-                }];
+                            // squash adjacent response items of the same type
+                            .reduce(
+                                (res, item) => {
+                                    return squashMessageIntoModelChatMessages(
+                                        res,
+                                        item
+                                    );
+                                },
+                                [] as SimplifiedModelChatItem["message"]
+                            )
+                    }
+                ];
 
             void (item satisfies never); // ensure all item types are handled
             return [];
@@ -696,7 +748,10 @@ function squashMessageIntoModelChatMessages(
     const newModelChatMessages = structuredClone(modelChatMessages);
     const lastExistingModelMessage = newModelChatMessages.at(-1);
 
-    if (lastExistingModelMessage == null || lastExistingModelMessage.type !== message.type) {
+    if (
+        lastExistingModelMessage == null ||
+        lastExistingModelMessage.type !== message.type
+    ) {
         // avoid pushing empty text messages
         if (message.type !== "text" || message.text !== "")
             newModelChatMessages.push(message);
@@ -708,7 +763,8 @@ function squashMessageIntoModelChatMessages(
         lastExistingModelMessage.text += message.text;
         return newModelChatMessages;
     } else if (
-        lastExistingModelMessage.type === "segment" && message.type === "segment" &&
+        lastExistingModelMessage.type === "segment" &&
+        message.type === "segment" &&
         lastExistingModelMessage.segmentType === message.segmentType &&
         lastExistingModelMessage.endTime == null
     ) {

@@ -1,0 +1,227 @@
+.modelListItem {
+    margin-bottom: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: white;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.modelListItem:hover {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.modelListItem.downloaded {
+    border-left: 3px solid #4caf50;
+}
+
+.modelListItem.downloading {
+    background-color: #f9f9f9;
+    border-left: 3px solid #2196f3;
+}
+
+.modelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+}
+
+.modelInfo {
+    flex: 1;
+}
+
+.modelName {
+    font-weight: 500;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 3px;
+}
+
+.modelMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    color: #666;
+}
+
+.modelSize {
+    font-weight: 500;
+}
+
+.modelContext {
+    color: #555;
+}
+
+.modelTag {
+    display: inline-block;
+    padding: 1px 6px;
+    background-color: #eee;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.modelTag.code {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+}
+
+.modelTag.reasoning {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+}
+
+.modelTag.moe {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.modelTag.chat {
+    background-color: #f3e5f5;
+    color: #4a148c;
+}
+
+.modelStatusIndicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.downloadedIndicator {
+    color: #4caf50;
+}
+
+.downloadedIndicator svg {
+    width: 18px;
+    height: 18px;
+}
+
+.expandButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #666;
+}
+
+.expandIcon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s ease;
+}
+
+.expandIcon.expanded {
+    transform: rotate(180deg);
+}
+
+.modelDetails {
+    padding: 0 15px 15px 15px;
+    border-top: 1px solid #eee;
+    background-color: #fafafa;
+}
+
+.modelDescription {
+    margin: 12px 0;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.4;
+}
+
+.downloadProgress {
+    margin: 15px 0;
+}
+
+.progressBarContainer {
+    height: 6px;
+    background-color: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progressBar {
+    height: 100%;
+    background-color: #2196f3;
+    transition: width 0.3s ease;
+}
+
+.progressText {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.downloadError {
+    color: #f44336;
+    font-weight: 500;
+}
+
+.modelActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.modelActions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modelActions button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.loadButton {
+    background-color: #0078d7;
+    color: white;
+    border: none;
+}
+
+.loadButton:hover {
+    background-color: #0062b1;
+}
+
+.deleteButton {
+    background-color: transparent;
+    color: #e53935;
+    border: 1px solid #e53935;
+}
+
+.deleteButton:hover {
+    background-color: #ffebee;
+}
+
+.downloadButton {
+    background-color: #0078d7;
+    color: white;
+    border: none;
+}
+
+.downloadButton:hover {
+    background-color: #0062b1;
+}
+
+.downloadingButton {
+    background-color: #90caf9;
+    color: white;
+    border: none;
+    opacity: 0.8;
+    cursor: not-allowed;
+}
