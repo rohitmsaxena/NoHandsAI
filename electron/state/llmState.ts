@@ -1,7 +1,15 @@
 import path from "node:path";
 import {
-    getLlama, Llama, LlamaChatSession, LlamaChatSessionPromptCompletionEngine, LlamaContext, LlamaContextSequence, LlamaModel,
-    isChatModelResponseSegment, type ChatModelSegmentType
+    getLlama,
+    Llama,
+    LlamaChatSession,
+    LlamaChatSessionPromptCompletionEngine,
+    LlamaContext,
+    LlamaContextSequence,
+    LlamaModel,
+    isChatModelResponseSegment,
+    type ChatModelSegmentType,
+    GeneralChatWrapper
 } from "node-llama-cpp";
 import {withLock, State} from "lifecycle-utils";
 import packageJson from "../../package.json";
@@ -308,7 +316,8 @@ export const llmFunctions = {
                     chatSession = new LlamaChatSession({
                         contextSequence,
                         autoDisposeSequence: false,
-                        systemPrompt: DEFAULT_SYSTEM_PROMPT
+                        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+                        chatWrapper: new GeneralChatWrapper()
                     });
 
                     chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
@@ -537,7 +546,8 @@ export const llmFunctions = {
             chatSession = new LlamaChatSession({
                 contextSequence,
                 autoDisposeSequence: false,
-                systemPrompt: DEFAULT_SYSTEM_PROMPT
+                systemPrompt: DEFAULT_SYSTEM_PROMPT,
+                chatWrapper: new GeneralChatWrapper()
             });
 
             // Reset in-progress response array
