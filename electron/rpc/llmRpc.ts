@@ -130,6 +130,8 @@ export const electronFunctions: ElectronLlmFunctions = {
 
     // Download a model by ID
     async downloadModel(modelId: string): Promise<void> {
+        console.log("Current Hugging Face token status:", llmState.state.huggingFaceToken ? "Token exists" : "No token");
+
         // Get the current RPC instance to update state
         const rpcInstance = getRpcInstance();
         if (!rpcInstance) {
@@ -164,6 +166,7 @@ export const electronFunctions: ElectronLlmFunctions = {
 
             // Start the download
             const token = llmState.state.huggingFaceToken;
+            console.log(`Preparing to download model: ${modelId} with${token ? "" : "out"} authentication`);
             await modelManager.downloadModel(modelId, token);
 
             // After successful download, update the downloaded models list

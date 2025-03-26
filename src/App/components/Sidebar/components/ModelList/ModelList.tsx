@@ -143,7 +143,6 @@ export function ModelList() {
         <div className="modelList">
             <div className="modelListHeader">
                 <div className="huggingFaceHelp">
-                    <p>Some models require Hugging Face authentication</p>
                     <button
                         className="openHfButton"
                         onClick={() => electronLlmRpc.openHuggingFaceTokenInTab()}
@@ -151,21 +150,20 @@ export function ModelList() {
                         Get Hugging Face Token
                     </button>
 
-                    {/* Add this token input section */}
                     <div className="tokenInputContainer">
                         <input
                             type="text"
                             className="tokenInput"
                             value={tokenInput}
                             onChange={(e) => setTokenInput(e.target.value)}
-                            placeholder="Paste your Hugging Face token here"
+                            placeholder="Paste your token here"
                         />
                         <button
                             className="saveTokenButton"
                             onClick={handleSaveToken}
                             disabled={!tokenInput.trim()}
                         >
-                            Save Token
+                            Save
                         </button>
                     </div>
                 </div>
