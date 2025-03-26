@@ -12,7 +12,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:deepseek-ai/deepseek-r1-distill-qwen-7b-instruct-gguf:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "deepseek-r1-distill-qwen-14b",
@@ -22,7 +23,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:deepseek-ai/deepseek-r1-distill-qwen-14b-instruct-gguf:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "deepseek-r1-distill-qwen-32b",
@@ -32,7 +34,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:deepseek-ai/deepseek-r1-distill-qwen-32b-instruct-gguf:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "deepseek-r1-distill-llama-8b",
@@ -42,7 +45,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:deepseek-ai/deepseek-r1-distill-llama-8b-instruct-gguf:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "deepseek-r1-distill-llama-70b",
@@ -52,7 +56,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:deepseek-ai/deepseek-r1-distill-llama-70b-instruct-gguf:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "llama-3.1-8b",
@@ -62,7 +67,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/Llama-3.1-8B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "llama-3.1-70b",
@@ -72,7 +78,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/Llama-3.1-70B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "llama-3.1-405b",
@@ -82,7 +89,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/Llama-3.1-405B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "phi-4-14b",
@@ -92,7 +100,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:microsoft/Phi-4-14B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "mistral-nemo-12b",
@@ -102,7 +111,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:mistralai/Mistral-Nemo-12B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: false
     },
     {
         id: "llama-3.2-3b",
@@ -112,7 +122,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/Llama-3.2-3B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat"],
-        contextLength: 4096
+        contextLength: 4096,
+        requiresAuth: true
     },
     {
         id: "phi-3-3.8b",
@@ -122,7 +133,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:microsoft/Phi-3-3.8B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat"],
-        contextLength: 4096
+        contextLength: 4096,
+        requiresAuth: true
     },
     {
         id: "olmoe-1b-7b",
@@ -132,7 +144,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:mistralai/OLMoE-1B-7B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "moe"],
-        contextLength: 4096
+        contextLength: 4096,
+        requiresAuth: true
     },
     {
         id: "mixtral-8x7b",
@@ -142,7 +155,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:mistralai/Mixtral-8x7B-Instruct-v0.1-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning", "moe"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "mistral-7b-instruct-v0.2",
@@ -152,7 +166,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:mistralai/Mistral-7B-Instruct-v0.2-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "dolphin-2.5-mixtral-8x7b",
@@ -162,7 +177,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:cognitivecomputations/dolphin-2.5-mixtral-8x7b-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning", "moe"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: false
     },
     {
         id: "gemma-2-9b",
@@ -172,7 +188,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:google/Gemma-2-9B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "gemma-2-2b",
@@ -182,7 +199,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:google/Gemma-2-2B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat"],
-        contextLength: 4096
+        contextLength: 4096,
+        requiresAuth: true
     },
     {
         id: "gemma-2-27b",
@@ -192,7 +210,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:google/Gemma-2-27B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     },
     {
         id: "orca-2-13b",
@@ -202,7 +221,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:microsoft/Orca-2-13B-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["chat", "reasoning"],
-        contextLength: 4096
+        contextLength: 4096,
+        requiresAuth: true
     },
     {
         id: "code-llama-7b",
@@ -212,7 +232,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/CodeLlama-7B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["code", "chat"],
-        contextLength: 16384
+        contextLength: 16384,
+        requiresAuth: true
     },
     {
         id: "code-llama-13b",
@@ -222,7 +243,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/CodeLlama-13B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["code", "chat"],
-        contextLength: 16384
+        contextLength: 16384,
+        requiresAuth: true
     },
     {
         id: "code-llama-34b",
@@ -232,7 +254,8 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:meta-llama/CodeLlama-34B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["code", "chat"],
-        contextLength: 16384
+        contextLength: 16384,
+        requiresAuth: true
     },
     {
         id: "codegemma-2b",
@@ -242,6 +265,7 @@ export const availableModels: LlmModelInfo[] = [
         downloadUrl: "hf:google/CodeGemma-2B-Instruct-GGUF:Q4_K_M",
         quantization: "Q4_K_M",
         tags: ["code", "chat"],
-        contextLength: 8192
+        contextLength: 8192,
+        requiresAuth: true
     }
 ];

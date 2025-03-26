@@ -89,7 +89,7 @@ export class ModelManager {
     /**
      * Download a model using node-llama-cpp's pull command
      */
-    public async downloadModel(modelId: string): Promise<void> {
+    public async downloadModel(modelId: string, token?: string): Promise<void> {
         const model = availableModels.find((m) => m.id === modelId);
         if (!model) {
             throw new Error(
@@ -104,9 +104,10 @@ export class ModelManager {
         });
 
         try {
+            const tokenParam = token ? `--token "${token}"` : "";
             // Use node-llama-cpp pull command to download the model
             // Format: node-llama-cpp pull --dir ./models "hf:organization/model:quantization"
-            const command = `node-llama-cpp pull --dir "${this.modelsDirectory}" "${model.downloadUrl}"`;
+            const command = `node-llama-cpp pull ${tokenParam} --dir "${this.modelsDirectory}" "${model.downloadUrl}"`;
 
             // Execute the command with output streaming for progress updates
             const child = exec(command);

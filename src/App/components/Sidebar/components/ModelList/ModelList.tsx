@@ -134,6 +134,15 @@ export function ModelList() {
         <div className="modelList">
             <div className="modelListHeader">
                 <h3>Available Models</h3>
+                <div className="huggingFaceHelp">
+                    <p>Some models require Hugging Face authentication</p>
+                    <button
+                        className="openHfButton"
+                        onClick={() => electronLlmRpc.openHuggingFaceTokenInTab()}
+                    >
+                        Get Hugging Face Token
+                    </button>
+                </div>
                 <div className="modelListSearch">
                     <input
                         type="text"

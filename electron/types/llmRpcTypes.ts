@@ -25,7 +25,9 @@ export interface ElectronLlmFunctions {
     setDraftPrompt(prompt: string): void,
     prompt(message: string): Promise<void>,
     stopActivePrompt(): void,
-    resetChatHistory(markAsLoaded?: boolean): void
+    resetChatHistory(markAsLoaded?: boolean): void,
+    setHuggingFaceToken(token: string): void,
+    openHuggingFaceTokenInTab(): Promise<void>
 }
 
 // Renderer-side functions exposed to electron

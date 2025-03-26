@@ -2,6 +2,7 @@
 
 import path from "node:path";
 import fs from "node:fs/promises";
+import * as console from "node:console";
 import {dialog, WebContentsView} from "electron";
 import {createElectronSideBirpc} from "../utils/createElectronSideBirpc.ts";
 import {llmFunctions, llmState} from "../state/llmState.ts";
@@ -59,6 +60,17 @@ export class ElectronLlmRpc {
 
 // Define the electronFunctions object outside the class
 export const electronFunctions: ElectronLlmFunctions = {
+    async openHuggingFaceTokenInTab(): Promise<void> {
+        // Use the browser functionality to open a new tab
+        const browserFunctions = await import("../state/browserState").then((module) => module.browserFunctions);
+        await browserFunctions.createTab("https://huggingface.co/settings/tokens");
+    },
+    setHuggingFaceToken(token: string): void {
+        llmState.state = {
+            ...llmState.state,
+            huggingFaceToken: token
+        };
+    },
     async selectModelFileAndLoad() {
         const res = await dialog.showOpenDialog({
             message: "Select a model file",
@@ -151,7 +163,8 @@ export const electronFunctions: ElectronLlmFunctions = {
             });
 
             // Start the download
-            await modelManager.downloadModel(modelId);
+            const token = llmState.state.huggingFaceToken;
+            await modelManager.downloadModel(modelId, token);
 
             // After successful download, update the downloaded models list
             const modelManagementState = await electronFunctions.getAvailableModels();
@@ -279,3 +292,4 @@ async function pathExists(path: string) {
         return false;
     }
 }
+

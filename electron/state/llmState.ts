@@ -108,7 +108,8 @@ export type LlmState = {
             completion: string
         }
     },
-    modelManagement?: ModelManagementState
+    modelManagement?: ModelManagementState,
+    huggingFaceToken?: string
 };
 
 export const llmFunctions = {
