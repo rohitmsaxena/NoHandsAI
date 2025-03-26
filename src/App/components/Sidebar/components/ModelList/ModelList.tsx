@@ -27,6 +27,15 @@ export function ModelList() {
     const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
     const [searchQuery, setSearchQuery] = useState("");
 
+    const [tokenInput, setTokenInput] = useState("");
+
+    const handleSaveToken = useCallback(() => {
+        if (tokenInput.trim()) {
+            electronLlmRpc.setHuggingFaceToken(tokenInput.trim());
+            setTokenInput(""); // Clear input after saving
+        }
+    }, [tokenInput]);
+
     // Handle model loading
     const handleLoadModel = useCallback(async (modelId: string) => {
         try {
@@ -133,7 +142,6 @@ export function ModelList() {
     return (
         <div className="modelList">
             <div className="modelListHeader">
-                <h3>Available Models</h3>
                 <div className="huggingFaceHelp">
                     <p>Some models require Hugging Face authentication</p>
                     <button
@@ -142,7 +150,27 @@ export function ModelList() {
                     >
                         Get Hugging Face Token
                     </button>
+
+                    {/* Add this token input section */}
+                    <div className="tokenInputContainer">
+                        <input
+                            type="text"
+                            className="tokenInput"
+                            value={tokenInput}
+                            onChange={(e) => setTokenInput(e.target.value)}
+                            placeholder="Paste your Hugging Face token here"
+                        />
+                        <button
+                            className="saveTokenButton"
+                            onClick={handleSaveToken}
+                            disabled={!tokenInput.trim()}
+                        >
+                            Save Token
+                        </button>
+                    </div>
                 </div>
+                <h3>Available Models</h3>
+
                 <div className="modelListSearch">
                     <input
                         type="text"

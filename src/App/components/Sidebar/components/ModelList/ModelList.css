@@ -128,3 +128,34 @@
 .openHfButton:hover {
     background-color: #0062b1;
 }
+
+
+/* Add to ModelList.css */
+.tokenInputContainer {
+    display: flex;
+    margin-top: 10px;
+    gap: 8px;
+}
+
+.tokenInput {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.saveTokenButton {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.saveTokenButton:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
